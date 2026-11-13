@@ -557,13 +557,21 @@ export const CONTENT_JS = `// Content script for Famly / Bright Horizons FamilyA
   }
 
   /**
-   * Extracts date string (YYYY-MM-DD) from CDN archive path or nearby DOM elements
+   * Extracts date string (YYYY-MM-DD) from CDN archive/S3 path or nearby DOM elements
    */
   function extractDateFromMedia(url, element) {
-    // 1. From archive URL path: /archive/YYYY/MM/DD/
-    const match = (url || '').match(new RegExp('/archive/([0-9]{4})/([0-9]{2})/([0-9]{2})/', 'i'));
-    if (match) {
-      return match[1] + '-' + match[2] + '-' + match[3];
+    // 1. From URL pathname: matches both /archive/YYYY/MM/DD/ (photos) and /YYYY/MM/DD/HH/{uuid}/ (S3 videos)
+    try {
+      const parsedPath = new URL(url, window.location.href).pathname;
+      const pathMatch = parsedPath.match(new RegExp('/((?:19|20)[0-9]{2})/(0[1-9]|1[0-2])/(0[1-9]|[12][0-9]|3[01])/', 'i'));
+      if (pathMatch) {
+        return pathMatch[1] + '-' + pathMatch[2] + '-' + pathMatch[3];
+      }
+    } catch (e) {}
+
+    const archiveMatch = (url || '').match(new RegExp('/((?:19|20)[0-9]{2})/(0[1-9]|1[0-2])/(0[1-9]|[12][0-9]|3[01])/', 'i'));
+    if (archiveMatch) {
+      return archiveMatch[1] + '-' + archiveMatch[2] + '-' + archiveMatch[3];
     }
 
     // 2. Fallback: Search parent activity card for timestamp element
@@ -610,12 +618,13 @@ export const CONTENT_JS = `// Content script for Famly / Bright Horizons FamilyA
       } catch (e) {}
     }
 
-    // Ignore tracking pixels & SVG icons
+    // Ignore tracking pixels, SVG icons, and S3 video poster thumbnails (thumb-00001.jpg)
     if (
       lower.startsWith('data:image/svg') ||
       lower.startsWith('data:image/gif') ||
       lower.includes('/icons/') ||
-      lower.includes('logo.svg')
+      lower.includes('logo.svg') ||
+      new RegExp('/thumb-[0-9]+\\\\.jpe?g(\\\\?|$)', 'i').test(lower)
     ) {
       return false;
     }
@@ -712,14 +721,26 @@ export const CONTENT_JS = `// Content script for Famly / Bright Horizons FamilyA
       }
       const src = node.getAttribute('src') || node.src;
       if (src) {
-        found.push({ url: src, el: node, type: (node.type && node.type.includes('video')) ? 'video' : 'image' });
+        const isVid = Boolean(
+          (node.type && node.type.toLowerCase().includes('video')) ||
+          (node.parentElement && node.parentElement.tagName === 'VIDEO') ||
+          /\\.(mp4|mov|webm)(\\?|$)/i.test(src)
+        );
+        found.push({ url: src, el: node, type: isVid ? 'video' : 'image' });
       }
     }
 
-    // 3. <video> element
+    // 3. <video> element (including preload="none" videos with child <source> nodes)
     else if (node.tagName === 'VIDEO') {
       const src = node.currentSrc || node.src || (node.getAttribute && (node.getAttribute('src') || node.getAttribute('data-src')));
       if (src) found.push({ url: src, el: node, type: 'video' });
+      if (node.querySelectorAll) {
+        const sources = node.querySelectorAll('source');
+        for (let s = 0; s < sources.length; s++) {
+          const sUrl = sources[s].getAttribute('src') || sources[s].src;
+          if (sUrl) found.push({ url: sUrl, el: node, type: 'video' });
+        }
+      }
     }
 
     // 4. Background images in style attribute (zero getComputedStyle overhead)
@@ -781,9 +802,9 @@ export const CONTENT_JS = `// Content script for Famly / Bright Horizons FamilyA
               });
               addedCount++;
             } else {
-              // Update with fresher expiring URL if available
+              // Always refresh with the latest signed URL (handles rotating S3 X-Amz-Expires & CDN expires)
               const existing = mediaQueue.get(key);
-              if (highRes.includes('expires') && !existing.url.includes('expires')) {
+              if (/expires|X-Amz-Signature/i.test(highRes)) {
                 existing.url = highRes;
               }
             }
@@ -1011,7 +1032,7 @@ export const CONTENT_JS = `// Content script for Famly / Bright Horizons FamilyA
     // 3. Scroll last visible card / post into view to trigger virtual list / intersection observer
     try {
       const allCards = document.querySelectorAll(
-        'article, [role="article"], [class*="card"], [class*="post"], [class*="feed-item"], [class*="activity"], [class*="MuiCard"]'
+        'article, [role="article"], [class*="card"], [class*="post"], [class*="feed-item"], [class*="activity"], [class*="MuiCard"], img[src*="familyapp"], img[src*="archive"], video'
       );
       if (allCards.length > 0) {
         const lastEl = allCards[allCards.length - 1];
