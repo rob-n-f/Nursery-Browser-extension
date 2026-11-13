@@ -574,20 +574,23 @@ export const CONTENT_JS = `// Content script for Famly / Bright Horizons FamilyA
       return archiveMatch[1] + '-' + archiveMatch[2] + '-' + archiveMatch[3];
     }
 
-    // 2. Fallback: Search parent activity card for timestamp element
+    // 2. Fallback: Search parent story / activity card for timestamp element or post link (e.g. "22 Apr 2024")
     if (element) {
       try {
         const card = element.closest
-          ? element.closest('article, [class*="activity"], [class*="feed-item"], [class*="post"], [class*="card"]')
+          ? element.closest('.story, article, [class*="activity"], [class*="feed-item"], [class*="post"], [class*="card"]')
           : null;
         if (card) {
-          const timeEl = card.querySelector('time, [class*="timestamp"], [class*="date"], [datetime]');
+          const timeEl = card.querySelector('time, a[href*="/post/"], [class*="timestamp"], [class*="date"], [datetime]');
           if (timeEl) {
             const dt = timeEl.getAttribute('datetime') || timeEl.textContent;
             if (dt) {
-              const parsed = new Date(dt.trim());
+              const parsed = new Date(dt.trim() + ' 12:00:00');
               if (!isNaN(parsed.getTime())) {
-                return parsed.toISOString().split('T')[0];
+                const y = parsed.getFullYear();
+                const m = String(parsed.getMonth() + 1).padStart(2, '0');
+                const d = String(parsed.getDate()).padStart(2, '0');
+                return y + '-' + m + '-' + d;
               }
             }
           }
@@ -645,14 +648,24 @@ export const CONTENT_JS = `// Content script for Famly / Bright Horizons FamilyA
       lower.includes('amazonaws.com') ||
       lower.includes('googleapis.com')
     ) {
-      // Check if avatar (only discard if NOT an archive path)
+      // Check if avatar / profile thumbnail (e.g. ?crop=face, /100x100/, /500x500/, comment form avatar, or child-profile-header)
       const isAvatar =
         lower.includes('/avatar/') ||
         lower.includes('avatar-') ||
-        (el && el.className && typeof el.className === 'string' && el.className.includes('avatar') && !lower.includes('/archive/'));
+        lower.includes('crop=face') ||
+        lower.includes('/100x100/') ||
+        lower.includes('/500x500/') ||
+        lower.includes('empty-profile') ||
+        lower.includes('profile-image') ||
+        Boolean(
+          el && (
+            (el.className && typeof el.className === 'string' && el.className.toLowerCase().includes('avatar')) ||
+            (el.closest && el.closest('#commentForm, .child-profile-header, .profile-header-wrapper, nav, header'))
+          )
+        );
 
-      if (lower.includes('/archive/')) return true;
       if (isAvatar) return false;
+      if (lower.includes('/archive/')) return true;
 
       return (
         /\\.(jpe?g|png|webp|avif|mp4|mov)(\\?|$)/i.test(lower) ||
@@ -664,7 +677,7 @@ export const CONTENT_JS = `// Content script for Famly / Bright Horizons FamilyA
     // Fallback: If inside an article / post card on page
     if (el) {
       try {
-        const inPost = el.closest && el.closest('article, [class*="post"], [class*="card"], [class*="feed"], [class*="activity"]');
+        const inPost = el.closest && el.closest('article, .story, .postImages, [class*="post"], [class*="card"], [class*="feed"], [class*="activity"]');
         if (inPost && /\\.(jpe?g|png|webp|avif|mp4)(\\?|$)/i.test(lower)) {
           return true;
         }
@@ -928,7 +941,7 @@ export const CONTENT_JS = `// Content script for Famly / Bright Horizons FamilyA
     // 3. Structural feed candidates (main, feed, timeline, MuiContainer, role="feed", etc.)
     try {
       const candidates = document.querySelectorAll(
-        'main, [role="main"], [role="feed"], [class*="feed"], [class*="timeline"], [class*="stream"], [class*="MuiContainer"], [class*="scroll"], section, [class*="sc-"], [class*="css-"]'
+        'main, #content, #learningJourneyRoot, [role="main"], [role="feed"], [class*="feed"], [class*="timeline"], [class*="stream"], [class*="MuiContainer"], [class*="scroll"], section, [class*="sc-"], [class*="css-"]'
       );
       for (let i = 0; i < candidates.length; i++) {
         const el = candidates[i];
@@ -949,24 +962,35 @@ export const CONTENT_JS = `// Content script for Famly / Bright Horizons FamilyA
   }
 
   /**
-   * Detects "Load More" / "Load Earlier" buttons (including Material-UI MuiButton)
+   * Detects the feed pagination "Load More" / "Load Earlier" button
+   * Ignores inline comment truncation buttons ("Show more" inside .story) and header/tab dropdowns ("More" with arrow_drop_down)
    */
   function findLoadMoreElement() {
     const candidates = Array.from(document.querySelectorAll(
       'button, [role="button"], a, input[type="button"], input[type="submit"], [class*="MuiButton"], [class*="load-more"]'
     ));
 
-    // Priority 1: Exact or direct phrase matches ("load more", "load earlier", "hent mere", etc.)
+    function isPaginationCandidate(el) {
+      if (!el) return false;
+      if (el.closest && el.closest('#famly-downloader-panel')) return false;
+      if (el.disabled || el.getAttribute('aria-disabled') === 'true' || el.hasAttribute('disabled')) return false;
+      // Ignore buttons inside individual story/post cards (e.g. inline comment "Show more" or "More options" menu)
+      if (el.closest && el.closest('.story, article, .child-profile-header, .profile-header-wrapper, header, nav')) return false;
+      // Ignore dropdown menu triggers containing Material icon text like "arrow_drop_down" or "more_horiz"
+      const rawText = (el.textContent || '').toLowerCase();
+      if (rawText.includes('arrow_drop_down') || rawText.includes('more_horiz') || rawText.includes('more_vert')) return false;
+      return true;
+    }
+
+    // Priority 1: Exact pagination button labels ("load more", "load earlier", "load older", "hent mere")
     const primaryKeywords = [
       'load more', 'load earlier', 'load older', 'load previous',
-      'show more', 'show earlier', 'see earlier', 'view earlier',
-      'view more', 'hent mere', 'more posts', 'more photos'
+      'see earlier', 'view earlier', 'hent mere', 'more posts', 'more photos'
     ];
 
     for (let i = 0; i < candidates.length; i++) {
       const el = candidates[i];
-      if (el.closest && el.closest('#famly-downloader-panel')) continue;
-      if (el.disabled || el.getAttribute('aria-disabled') === 'true' || el.hasAttribute('disabled')) continue;
+      if (!isPaginationCandidate(el)) continue;
 
       const text = (el.textContent || '').trim().toLowerCase();
       const aria = (el.getAttribute('aria-label') || '').toLowerCase();
@@ -974,18 +998,17 @@ export const CONTENT_JS = `// Content script for Famly / Bright Horizons FamilyA
 
       for (let k = 0; k < primaryKeywords.length; k++) {
         const kw = primaryKeywords[k];
-        if (text.includes(kw) || aria.includes(kw) || testId.includes(kw)) {
+        if (text === kw || text.includes(kw) || aria.includes(kw) || testId.includes(kw)) {
           return el;
         }
       }
     }
 
-    // Priority 2: Shorter secondary words ("older", "earlier", "ældre", "more")
-    const secondaryKeywords = ['older', 'earlier', 'ældre', 'more'];
+    // Priority 2: Secondary pagination phrases outside story cards ("show more", "show earlier", "view more", "older", "earlier", "ældre")
+    const secondaryKeywords = ['show more', 'show earlier', 'view more', 'older', 'earlier', 'ældre'];
     for (let i = 0; i < candidates.length; i++) {
       const el = candidates[i];
-      if (el.closest && el.closest('#famly-downloader-panel')) continue;
-      if (el.disabled || el.getAttribute('aria-disabled') === 'true' || el.hasAttribute('disabled')) continue;
+      if (!isPaginationCandidate(el)) continue;
 
       const text = (el.textContent || '').trim().toLowerCase();
       if (text.length > 0 && text.length < 30) {
@@ -1014,7 +1037,7 @@ export const CONTENT_JS = `// Content script for Famly / Bright Horizons FamilyA
     // 2. Scroll last visible card / media into view to trigger virtual list / intersection observer
     try {
       const allCards = document.querySelectorAll(
-        'article, [role="article"], [class*="card"], [class*="post"], [class*="feed-item"], [class*="activity"], [class*="MuiCard"], img[src*="familyapp"], img[src*="archive"], video'
+        '.story, article, [role="article"], [class*="card"], [class*="post"], [class*="feed-item"], [class*="activity"], [class*="MuiCard"], img[src*="familyapp"], img[src*="archive"], video'
       );
       if (allCards.length > 0) {
         const lastEl = allCards[allCards.length - 1];
@@ -1328,15 +1351,15 @@ export const CONTENT_JS = `// Content script for Famly / Bright Horizons FamilyA
 export const CONTENT_CSS = `/* Styling for in-page floating widget */
 #famly-downloader-panel {
   position: fixed;
-  bottom: 24px;
-  right: 24px;
+  bottom: 80px;
+  right: 20px;
   width: 276px;
   background: rgba(255, 255, 255, 0.98);
   backdrop-filter: blur(12px);
   border: 1px solid #cbd5e1;
   box-shadow: 0 12px 28px -6px rgba(15, 23, 42, 0.18), 0 8px 12px -6px rgba(15, 23, 42, 0.08);
   border-radius: 14px;
-  z-index: 99999999;
+  z-index: 2147483000;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   color: #1e293b;
   box-sizing: border-box;
