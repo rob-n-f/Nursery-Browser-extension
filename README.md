@@ -9,7 +9,7 @@ Supports **Google Chrome**, **Microsoft Edge**, and **Mozilla Firefox** (Manifes
 ## Overview
 
 This repository contains both:
-1. **The Interactive Web App, Simulator & Store Packager** (`src/`) — Live browser simulator, installation walkthrough, destination folder guide, and one-click `.zip` packager for Chrome/Edge, Firefox, and Store Promotional Visual Artefacts.
+1. **The Interactive Web App & Store Packager** (`src/`) — Installation walkthrough, destination folder guide, and one-click `.zip` packager for Chrome/Edge, Firefox, and Store Promotional Visual Artefacts.
 2. **The Manifest V3 Browser Extension Source** (`src/extension-files/extensionData.ts`) — Complete, zero-dependency WebExtension source code with embedded JPEG `APP1` EXIF datestamp injection, 1920×1080 CDN master photo recovery, direct MP4/MOV video streaming, and automated feed scrolling.
 
 ---

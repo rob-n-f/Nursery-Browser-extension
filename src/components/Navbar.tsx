@@ -1,5 +1,5 @@
 import React from 'react';
-import { Download, FolderSync, Chrome, PackageCheck } from 'lucide-react';
+import { Download, FolderSync, PackageCheck } from 'lucide-react';
 import { downloadExtensionZip } from '../services/extensionExporter';
 import { BRAND } from '../constants/brand';
 import { BrandLogo } from './BrandLogo';
@@ -23,7 +23,6 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
 
   const navItems = [
     { id: 'overview', label: 'Overview & Install', icon: Download },
-    { id: 'preview', label: 'Preview Chrome App', icon: Chrome, badge: 'Live Simulator' },
     { id: 'folder', label: 'Choose Destination Folder', icon: FolderSync },
     { id: 'store-kit', label: 'Store Kit & Brand Assets', icon: PackageCheck, badge: `v${BRAND.version}` },
   ];

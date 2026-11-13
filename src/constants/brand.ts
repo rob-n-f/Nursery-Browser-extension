@@ -1,6 +1,6 @@
 /**
  * Central Brand, Versioning, and Store Compliance Configuration
- * Single source of truth across Web App, Simulator, Extension Package, and Store Kit.
+ * Single source of truth across Web App, Extension Package, and Store Kit.
  */
 
 export const BRAND = {
@@ -14,7 +14,6 @@ export const BRAND = {
   defaultFolder: 'Nursery_Photos',
   defaultNamingPattern: '{date}_media_{index}',
   geckoAddonId: 'nursery-media-downloader@robinfowler.addon',
-  chromeExtensionSimulatedId: 'nursery-media-downloader-mv3',
   zipFileNames: {
     chromium: 'nursery-media-downloader-chrome-edge-mv3.zip',
     firefox: 'nursery-media-downloader-firefox-mv3.zip',

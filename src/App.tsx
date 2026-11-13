@@ -7,13 +7,12 @@ import React, { useState } from 'react';
 import { Navbar } from './components/Navbar';
 import { ExtensionOverview } from './components/ExtensionOverview';
 import { FolderSetupGuide } from './components/FolderSetupGuide';
-import { ChromeAppPreview } from './components/ChromeAppPreview';
 import { StorePublishingKit } from './components/StorePublishingKit';
 import { BrandLogo } from './components/BrandLogo';
 import { BRAND } from './constants/brand';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<string>('preview');
+  const [activeTab, setActiveTab] = useState<string>('overview');
 
   return (
     <div className="min-h-screen bg-slate-100/70 text-slate-900 flex flex-col font-sans">
@@ -24,10 +23,6 @@ export default function App() {
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-8">
         {activeTab === 'overview' && (
           <ExtensionOverview onSwitchTab={(tab) => setActiveTab(tab)} />
-        )}
-
-        {activeTab === 'preview' && (
-          <ChromeAppPreview onSwitchTab={(tab) => setActiveTab(tab)} />
         )}
 
         {activeTab === 'folder' && <FolderSetupGuide />}
@@ -47,14 +42,8 @@ export default function App() {
           </div>
           <div className="flex flex-wrap items-center gap-4">
             <button
-              onClick={() => setActiveTab('preview')}
-              className="hover:text-slate-900 transition-colors cursor-pointer font-semibold text-sky-700"
-            >
-              Preview Chrome App
-            </button>
-            <button
               onClick={() => setActiveTab('overview')}
-              className="hover:text-slate-900 transition-colors cursor-pointer"
+              className="hover:text-slate-900 transition-colors cursor-pointer font-semibold text-sky-700"
             >
               Installation Guide
             </button>

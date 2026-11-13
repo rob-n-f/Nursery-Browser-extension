@@ -74,15 +74,6 @@ export const ExtensionOverview: React.FC<ExtensionOverviewProps> = ({ onSwitchTa
 
           <div className="flex flex-wrap items-center gap-3 sm:gap-4">
             <button
-              id="hero-preview-btn"
-              onClick={() => onSwitchTab('preview')}
-              className="inline-flex items-center gap-2.5 px-5 py-3.5 rounded-xl font-extrabold text-sm bg-sky-400 hover:bg-sky-300 text-slate-950 transition-all shadow-lg shadow-sky-400/25 active:scale-98 cursor-pointer border border-sky-300"
-            >
-              <Chrome className="w-5 h-5 text-slate-950" />
-              <span>Preview Chrome App (Live Simulator)</span>
-            </button>
-
-            <button
               id="hero-download-chromium-btn"
               onClick={() => handleDownloadZip('chromium')}
               disabled={isExporting !== null}
