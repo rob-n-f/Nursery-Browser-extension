@@ -159,7 +159,13 @@ chrome.runtime.onInstalled.addListener(() => {
 });
 
 // Helper: Formats date to EXIF standard (YYYY:MM:DD HH:MM:SS)
-function formatExifDate(dateStr) {
+// Extracts exact hour from /archive/YYYY/MM/DD/HH/ path when present
+function formatExifDate(dateStr, url) {
+  const archiveMatch = (url || '').match(new RegExp('/archive/(\\\\d{4})/(\\\\d{2})/(\\\\d{2})(?:/(\\\\d{2}))?'));
+  if (archiveMatch) {
+    const hh = archiveMatch[4] && Number(archiveMatch[4]) <= 23 ? archiveMatch[4] : '12';
+    return archiveMatch[1] + ':' + archiveMatch[2] + ':' + archiveMatch[3] + ' ' + hh + ':00:00';
+  }
   const match = (dateStr || '').match(new RegExp('(\\\\d{4})[-/.](\\\\d{2})[-/.](\\\\d{2})'));
   if (match) {
     return match[1] + ':' + match[2] + ':' + match[3] + ' 12:00:00';
@@ -172,13 +178,13 @@ function formatExifDate(dateStr) {
 }
 
 // Helper: Injects standard APP1 EXIF segment (DateTimeOriginal, DateTimeDigitized, DateTime)
-function injectExifIntoJpeg(buffer, dateStr) {
+function injectExifIntoJpeg(buffer, dateStr, url) {
   const bytes = new Uint8Array(buffer);
   if (bytes.length < 4 || bytes[0] !== 0xff || bytes[1] !== 0xd8) {
     return buffer; // Not a JPEG
   }
 
-  const exifDate = formatExifDate(dateStr);
+  const exifDate = formatExifDate(dateStr, url);
   const dateBytes = new TextEncoder().encode(exifDate + '\\0');
 
   // Build TIFF payload (88 bytes, Little Endian)
@@ -378,7 +384,7 @@ async function downloadItem(item, filename, isVideo, promptSaveAs = false) {
       const res = await fetch(item.url);
       if (res.ok) {
         const buffer = await res.arrayBuffer();
-        const finalBuffer = injectExifIntoJpeg(buffer, item.date);
+        const finalBuffer = injectExifIntoJpeg(buffer, item.date, item.url);
         const mimeType = 'image/jpeg';
         if (typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function') {
           const blob = new Blob([finalBuffer], { type: mimeType });
@@ -453,21 +459,25 @@ export const CONTENT_JS = `// Content script for Famly / Bright Horizons FamilyA
   try {
     chrome.storage.local.get(['downloadedHistory'], (res) => {
       if (res && Array.isArray(res.downloadedHistory)) {
-        res.downloadedHistory.forEach((u) => downloadedUrls.add(u));
+        res.downloadedHistory.forEach((u) => downloadedUrls.add(getMediaKey(u)));
       }
       updateUI();
     });
   } catch (e) {}
 
   /**
-   * Generates a stable canonical key from a media URL
-   * Strips dynamic query parameters (e.g. expiring auth tokens) so duplicate
-   * references to the same photo share one queue entry while preserving the latest signed URL.
+   * Generates a stable canonical key from a media URL.
+   * Normalizes to the immutable /archive/... path when present so portrait/landscape
+   * variants and daily rotating HMAC signatures / expiring tokens share one key.
    */
   function getMediaKey(url) {
     if (!url) return '';
     try {
       const parsed = new URL(url, window.location.href);
+      const archiveIdx = parsed.pathname.indexOf('/archive/');
+      if (archiveIdx !== -1) {
+        return parsed.origin + parsed.pathname.substring(archiveIdx);
+      }
       return parsed.origin + parsed.pathname;
     } catch (e) {
       return url;
@@ -493,16 +503,25 @@ export const CONTENT_JS = `// Content script for Famly / Bright Horizons FamilyA
   }
 
   /**
-   * Transforms Famly & Bright Horizons CDN thumbnail/cropped URLs into full-res master images (1920x1080)
-   * Preserves /archive/ path structure, valid tokens, and query credentials.
+   * Transforms Famly & Bright Horizons CDN thumbnail/cropped URLs into full-res master images
+   * Preserves portrait (1080x1920) vs landscape (1920x1080) orientation, /archive/ path structure,
+   * valid HMAC tokens, and query credentials.
    */
   function toFullRes(url) {
     if (!url) return null;
     try {
       const parsed = new URL(url, window.location.href);
 
-      // If already at 1920x1080, return cleaned URL
-      if (parsed.pathname.includes('/1920x1080/')) {
+      // Remove downscaling / cropping query parameters if present
+      const paramsToDelete = ['crop', 'width', 'height', 'w', 'h', 'fit', 'max-w', 'max-h'];
+      for (const p of paramsToDelete) {
+        if (parsed.searchParams.has(p)) {
+          parsed.searchParams.delete(p);
+        }
+      }
+
+      // If already at full 1080p (landscape 1920x1080 or portrait 1080x1920), return cleaned URL
+      if (parsed.pathname.includes('/1920x1080/') || parsed.pathname.includes('/1080x1920/')) {
         return parsed.toString();
       }
 
@@ -512,8 +531,14 @@ export const CONTENT_JS = `// Content script for Famly / Bright Horizons FamilyA
       for (let i = 0; i < parts.length; i++) {
         if (parts[i] === 'image' && parts[i + 2]) {
           const dimSeg = parts[i + 2];
-          // Only replace if segment is a known size token (e.g. 1040x520, 200x200, thumbnail)
-          if (/^([0-9]+x[0-9]+|thumbnail|scaled|small|medium|thumb)$/i.test(dimSeg)) {
+          const dimMatch = dimSeg.match(/^([0-9]+)x([0-9]+)$/i);
+          if (dimMatch) {
+            const w = parseInt(dimMatch[1], 10);
+            const h = parseInt(dimMatch[2], 10);
+            // Preserve portrait (e.g. 520x1040 -> 1080x1920) vs landscape (e.g. 1040x520 -> 1920x1080)
+            parts[i + 2] = w < h ? '1080x1920' : '1920x1080';
+            break;
+          } else if (/^(thumbnail|scaled|small|medium|thumb)$/i.test(dimSeg)) {
             parts[i + 2] = '1920x1080';
             break;
           } else if (dimSeg === 'archive') {
@@ -524,14 +549,6 @@ export const CONTENT_JS = `// Content script for Famly / Bright Horizons FamilyA
         }
       }
       parsed.pathname = parts.join('/');
-
-      // Remove downscaling / cropping query parameters if present
-      const paramsToDelete = ['crop', 'width', 'height', 'w', 'h', 'fit', 'max-w', 'max-h'];
-      for (const p of paramsToDelete) {
-        if (parsed.searchParams.has(p)) {
-          parsed.searchParams.delete(p);
-        }
-      }
 
       return parsed.toString();
     } catch (e) {
@@ -607,7 +624,9 @@ export const CONTENT_JS = `// Content script for Famly / Bright Horizons FamilyA
     if (
       lower.includes('/archive/') ||
       lower.includes('/1920x1080/') ||
+      lower.includes('/1080x1920/') ||
       lower.includes('/1040x520/') ||
+      lower.includes('/520x1040/') ||
       lower.includes('/image/') ||
       lower.includes('/images/') ||
       lower.includes('img.familyapp') ||
@@ -1270,7 +1289,7 @@ export const CONTENT_JS = `// Content script for Famly / Bright Horizons FamilyA
       return true;
     } else if (msg.action === 'DOWNLOAD_PROGRESS') {
       const { completed, failed, total, currentUrl } = msg.progress;
-      downloadedUrls.add(currentUrl);
+      downloadedUrls.add(getMediaKey(currentUrl));
       chrome.storage.local.set({ downloadedHistory: Array.from(downloadedUrls) });
       updateUI();
     } else if (msg.action === 'DOWNLOAD_COMPLETE') {
