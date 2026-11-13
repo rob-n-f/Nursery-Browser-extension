@@ -849,7 +849,8 @@ export const CONTENT_JS = `// Content script for Famly / Bright Horizons FamilyA
   }
 
   /**
-   * Robust multi-stage click trigger for React & Material-UI buttons in Firefox & Chrome
+   * Clean single-click trigger for React 18 & Material-UI (MuiButtonBase) buttons in Chrome & Firefox.
+   * Dispatches pointer/mouse press sequence followed by a single native click so onClick fires once.
    */
   function triggerClick(el) {
     if (!el) return false;
@@ -864,53 +865,40 @@ export const CONTENT_JS = `// Content script for Famly / Bright Horizons FamilyA
     // 2. Set focus
     try { el.focus(); } catch (e) {}
 
-    // 3. Dispatch PointerEvents (essential for React 18 & MUI ButtonBase)
+    // 3. Dispatch pointer & mouse press/release sequence (triggers MuiTouchRipple without duplicate click events)
     try {
       if (typeof PointerEvent !== 'undefined') {
-        el.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, composed: true, view: window, isPrimary: true, pointerType: 'mouse', button: 0 }));
-        el.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, cancelable: true, composed: true, view: window, isPrimary: true, pointerType: 'mouse', button: 0 }));
+        el.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, composed: true, view: window, isPrimary: true, pointerType: 'mouse', button: 0, buttons: 1 }));
       }
-    } catch (e) {}
-
-    // 4. Dispatch MouseEvents (mousedown -> mouseup -> click)
-    try {
       el.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, composed: true, view: window, detail: 1, button: 0, buttons: 1 }));
+      if (typeof PointerEvent !== 'undefined') {
+        el.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, cancelable: true, composed: true, view: window, isPrimary: true, pointerType: 'mouse', button: 0, buttons: 0 }));
+      }
       el.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, composed: true, view: window, detail: 1, button: 0, buttons: 0 }));
-      el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, composed: true, view: window, detail: 1, button: 0 }));
     } catch (e) {}
 
-    // 5. Trigger un-sandboxed DOM click in Firefox via wrappedJSObject if available, plus standard click
+    // 4. Fire a single click event (prefer un-sandboxed wrappedJSObject in Firefox if present, else standard el.click())
+    let clicked = false;
     try {
       if (el.wrappedJSObject && typeof el.wrappedJSObject.click === 'function') {
         el.wrappedJSObject.click();
-      }
-    } catch (e) {}
-    try {
-      el.click();
-    } catch (e) {}
-
-    // 6. Also trigger on inner child element (e.g. MuiTouchRipple-root or inner span)
-    try {
-      const child = el.querySelector('.MuiTouchRipple-root, span, div') || el.firstElementChild;
-      if (child) {
-        child.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, composed: true, view: window }));
-        child.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, composed: true, view: window }));
-        child.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, composed: true, view: window }));
-        if (child.wrappedJSObject && typeof child.wrappedJSObject.click === 'function') {
-          child.wrappedJSObject.click();
-        } else if (typeof child.click === 'function') {
-          child.click();
-        }
+        clicked = true;
       }
     } catch (e) {}
 
-    // 7. Dispatch Enter keydown/keyup on focused button
-    try {
-      el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true }));
-      el.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true }));
-    } catch (e) {}
+    if (!clicked) {
+      try {
+        el.click();
+        clicked = true;
+      } catch (e) {
+        try {
+          el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, composed: true, view: window, detail: 1, button: 0 }));
+          clicked = true;
+        } catch (e2) {}
+      }
+    }
 
-    return true;
+    return clicked;
   }
 
   /**
@@ -940,7 +928,7 @@ export const CONTENT_JS = `// Content script for Famly / Bright Horizons FamilyA
     // 3. Structural feed candidates (main, feed, timeline, MuiContainer, role="feed", etc.)
     try {
       const candidates = document.querySelectorAll(
-        'main, [role="main"], [role="feed"], [class*="feed"], [class*="timeline"], [class*="stream"], [class*="MuiContainer"], [class*="scroll"], section, [class*="sc-"]'
+        'main, [role="main"], [role="feed"], [class*="feed"], [class*="timeline"], [class*="stream"], [class*="MuiContainer"], [class*="scroll"], section, [class*="sc-"], [class*="css-"]'
       );
       for (let i = 0; i < candidates.length; i++) {
         const el = candidates[i];
@@ -1020,16 +1008,10 @@ export const CONTENT_JS = `// Content script for Famly / Bright Horizons FamilyA
     scanCycles++;
     let clickedButton = false;
 
-    // 1. Look for and trigger Load More button before scrolling
-    const loadMoreBtn = findLoadMoreElement();
-    if (loadMoreBtn) {
-      clickedButton = triggerClick(loadMoreBtn);
-    }
-
-    // 2. Perform smooth scroll on all scrollable containers (window + inner feed containers)
+    // 1. Perform smooth scroll on all scrollable containers (window + inner feed containers)
     scrollAllScrollableContainers();
 
-    // 3. Scroll last visible card / post into view to trigger virtual list / intersection observer
+    // 2. Scroll last visible card / media into view to trigger virtual list / intersection observer
     try {
       const allCards = document.querySelectorAll(
         'article, [role="article"], [class*="card"], [class*="post"], [class*="feed-item"], [class*="activity"], [class*="MuiCard"], img[src*="familyapp"], img[src*="archive"], video'
@@ -1040,15 +1022,13 @@ export const CONTENT_JS = `// Content script for Famly / Bright Horizons FamilyA
       }
     } catch (e) {}
 
-    // 4. Check for Load More button again after scroll (in case it just came into DOM)
-    if (!clickedButton) {
-      const secondCheckBtn = findLoadMoreElement();
-      if (secondCheckBtn) {
-        clickedButton = triggerClick(secondCheckBtn);
-      }
+    // 3. Find and trigger the "Load more" button once at the bottom of the feed
+    const loadMoreBtn = findLoadMoreElement();
+    if (loadMoreBtn) {
+      clickedButton = triggerClick(loadMoreBtn);
     }
 
-    // 5. Harvest newly rendered media
+    // 4. Harvest newly rendered media
     harvestMedia();
 
     // 6. Update UI labels
