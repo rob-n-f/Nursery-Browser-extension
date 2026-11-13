@@ -27,6 +27,8 @@ import {
   Info,
   Check
 } from 'lucide-react';
+import { BrandLogo } from './BrandLogo';
+import { BRAND } from '../constants/brand';
 
 interface FeedPost {
   id: string;
@@ -198,12 +200,16 @@ const OLDER_POSTS_BATCH: FeedPost[] = [
   }
 ];
 
-export const ChromeAppPreview: React.FC = () => {
+interface ChromeAppPreviewProps {
+  onSwitchTab?: (tab: string) => void;
+}
+
+export const ChromeAppPreview: React.FC<ChromeAppPreviewProps> = () => {
   // Navigation tabs in the simulated Chrome browser
   const [activeChromeTab, setActiveChromeTab] = useState<'feed' | 'options' | 'extensions'>('feed');
   const [browserPortal, setBrowserPortal] = useState<'brighthorizons' | 'famly'>('brighthorizons');
 
-  // Extension popup state (opened via Chrome toolbar icon 📸)
+  // Extension popup state (opened via Chrome toolbar icon)
   const [isPopupOpen, setIsPopupOpen] = useState<boolean>(false);
 
   // Content script floating widget states
@@ -225,9 +231,9 @@ export const ChromeAppPreview: React.FC = () => {
   const [downloadLogs, setDownloadLogs] = useState<string[]>([]);
 
   // Extension Options settings state
-  const [subfolderName, setSubfolderName] = useState<string>('Nursery_Photos');
+  const [subfolderName, setSubfolderName] = useState<string>(BRAND.defaultFolder);
   const [promptSaveAs, setPromptSaveAs] = useState<boolean>(false);
-  const [namingPattern, setNamingPattern] = useState<string>('{date}_media_{index}');
+  const [namingPattern, setNamingPattern] = useState<string>(BRAND.defaultNamingPattern);
   const [savedOptionsToast, setSavedOptionsToast] = useState<boolean>(false);
 
   const feedContainerRef = useRef<HTMLDivElement>(null);
@@ -295,11 +301,18 @@ export const ChromeAppPreview: React.FC = () => {
       const postIndex = Math.min(Math.floor((current - 1) / 3), posts.length - 1);
       const post = posts[postIndex];
       const mediaItem = post.media[(current - 1) % post.media.length];
-      const filename = `${subfolderName}/${mediaItem.date.slice(0, 10)}_media_${String(current).padStart(3, '0')}.${mediaItem.type === 'video' ? 'mp4' : 'jpg'}`;
+      const isVideo = mediaItem.type === 'video';
+      const baseName = (namingPattern || BRAND.defaultNamingPattern)
+        .replace('{date}', mediaItem.date.slice(0, 10))
+        .replace('{index}', String(current).padStart(3, '0'))
+        .replace('{type}', isVideo ? 'video' : 'photo');
+      const filename = `${subfolderName}/${baseName}.${isVideo ? 'mp4' : 'jpg'}`;
 
       setDownloadStatusText(`Saving item ${current}/${total}: ${filename}`);
       setDownloadLogs(prev => [
-        `[Chrome Downloads] Stored "${filename}" with EXIF DateTimeOriginal "${mediaItem.date}"`,
+        isVideo
+          ? `[Direct Video Stream] Saved "${filename}" via native chrome.downloads`
+          : `[EXIF APP1 Injected] Saved "${filename}" with DateTimeOriginal "${mediaItem.date}"`,
         ...prev.slice(0, 5)
       ]);
 
@@ -327,13 +340,13 @@ export const ChromeAppPreview: React.FC = () => {
         <div>
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-100 text-sky-800 text-xs font-bold mb-2">
             <Chrome className="w-3.5 h-3.5 text-sky-600" />
-            <span>Interactive Chrome Extension Simulator</span>
+            <span>Interactive Browser Extension Simulator • v{BRAND.version}</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-            Chrome App & Extension Live Preview
+            {BRAND.name} — Live Simulator
           </h1>
           <p className="text-sm text-slate-600 mt-1 max-w-2xl">
-            Test the complete Chrome extension workflow: test the <strong>Action Popup</strong>, the <strong>in-page floating widget</strong> on live nursery feeds, the <strong>auto-scroll 'Load More' detector</strong>, and <strong>Folder & Options configuration</strong>.
+            Test the complete extension workflow: open the <strong>Action Popup</strong>, inspect the <strong>in-page floating widget</strong> on live nursery feeds, trigger the <strong>auto-scroll &apos;Load More&apos; detector</strong>, and customize <strong>Folder &amp; Options</strong>.
           </p>
         </div>
 
@@ -421,7 +434,7 @@ export const ChromeAppPreview: React.FC = () => {
               }`}
             >
               <Settings className="w-3.5 h-3.5 text-sky-500" />
-              <span className="truncate">Nursery Downloader Settings</span>
+              <span className="truncate">{BRAND.shortName} Settings</span>
               <span className="text-[10px] ml-auto text-slate-400">×</span>
             </button>
 
@@ -441,7 +454,7 @@ export const ChromeAppPreview: React.FC = () => {
           </div>
 
           <div className="text-slate-400 text-xs px-2 flex items-center gap-2">
-            <span className="hidden sm:inline font-mono text-[11px] text-slate-400">Chrome v124</span>
+            <span className="hidden sm:inline font-mono text-[11px] text-slate-400">Chrome • MV3</span>
           </div>
         </div>
 
@@ -484,7 +497,7 @@ export const ChromeAppPreview: React.FC = () => {
                   ? 'https://familyapp.brighthorizons.co.uk/news-feed'
                   : 'https://app.famly.co/#/feed'
                 : activeChromeTab === 'options'
-                ? 'chrome-extension://famly-downloader-chrome-mv3/options.html'
+                ? `chrome-extension://${BRAND.chromeExtensionSimulatedId}/options.html`
                 : 'chrome://extensions'}
             </span>
 
@@ -505,7 +518,7 @@ export const ChromeAppPreview: React.FC = () => {
                   onClick={() => setBrowserPortal('famly')}
                   className={`px-2 py-0.5 rounded text-[10px] font-semibold cursor-pointer ${
                     browserPortal === 'famly'
-                      ? 'bg-indigo-100 text-indigo-800'
+                      ? 'bg-teal-100 text-teal-800'
                       : 'text-slate-400 hover:text-slate-600'
                   }`}
                 >
@@ -530,14 +543,14 @@ export const ChromeAppPreview: React.FC = () => {
             <div className="relative">
               <button
                 onClick={() => setIsPopupOpen(!isPopupOpen)}
-                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                   isPopupOpen
-                    ? 'bg-emerald-600 text-white shadow-xs'
+                    ? 'bg-slate-900 text-white shadow-xs'
                     : 'bg-white hover:bg-slate-200 text-slate-900 border border-slate-300 shadow-xs'
                 }`}
-                title="Nursery Media Downloader (Click to open extension popup)"
+                title={`${BRAND.name} (Click to open extension popup)`}
               >
-                <span className="text-sm">📸</span>
+                <BrandLogo size="xs" />
                 <span className="hidden sm:inline font-mono text-[11px] bg-emerald-500 text-slate-950 font-bold px-1.5 py-0.2 rounded-full">
                   {totalMediaItems}
                 </span>
@@ -547,16 +560,14 @@ export const ChromeAppPreview: React.FC = () => {
               {isPopupOpen && (
                 <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-2xl border border-slate-300 z-50 p-4 text-slate-900 animate-in fade-in zoom-in-95 font-sans">
                   <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-100">
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-700 flex items-center justify-center font-bold text-sm">
-                        📸
-                      </div>
+                    <div className="flex items-center gap-2.5">
+                      <BrandLogo size="sm" />
                       <div>
                         <h4 className="font-bold text-xs text-slate-900 leading-none">
-                          Nursery Media Downloader
+                          {BRAND.name}
                         </h4>
                         <p className="text-[10px] text-slate-500 mt-0.5">
-                          Bright Horizons & Famly Media
+                          Bright Horizons FamilyApp &amp; Famly
                         </p>
                       </div>
                     </div>
@@ -574,7 +585,7 @@ export const ChromeAppPreview: React.FC = () => {
                       <span className="text-slate-600">Active Tab Status:</span>
                       <span className="inline-flex items-center gap-1 font-semibold text-[11px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-ping" />
-                        Famly Active
+                        Feed Active
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
@@ -633,15 +644,15 @@ export const ChromeAppPreview: React.FC = () => {
 
                   {/* Popup Footer */}
                   <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-400">
-                    <span>v1.3.0 MV3</span>
+                    <span>v{BRAND.version} • Manifest V3</span>
                     <button
                       onClick={() => {
                         setActiveChromeTab('options');
                         setIsPopupOpen(false);
                       }}
-                      className="text-sky-600 hover:underline cursor-pointer"
+                      className="text-sky-600 hover:underline font-semibold cursor-pointer"
                     >
-                      Folder & Options ⚙️
+                      Folder &amp; Options
                     </button>
                   </div>
                 </div>
@@ -649,7 +660,7 @@ export const ChromeAppPreview: React.FC = () => {
             </div>
 
             {/* Chrome User Avatar */}
-            <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-sky-400 to-indigo-600 text-white text-[11px] font-bold flex items-center justify-center shadow-xs">
+            <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-sky-500 to-teal-600 text-white text-[11px] font-bold flex items-center justify-center shadow-xs">
               RF
             </div>
           </div>
@@ -822,8 +833,8 @@ export const ChromeAppPreview: React.FC = () => {
                       onClick={() => setIsWidgetMinimized(false)}
                       className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-slate-900 text-white shadow-2xl border border-slate-700 hover:bg-slate-800 transition-all cursor-pointer animate-in fade-in"
                     >
-                      <span className="text-base">📸</span>
-                      <span className="font-bold text-xs">Nursery Downloader</span>
+                      <BrandLogo size="xs" />
+                      <span className="font-bold text-xs">{BRAND.shortName}</span>
                       <span className="px-1.5 py-0.5 rounded-full bg-emerald-500 text-slate-950 font-bold text-[10px]">
                         {totalMediaItems}
                       </span>
@@ -833,14 +844,14 @@ export const ChromeAppPreview: React.FC = () => {
                     <div className="bg-slate-900/95 backdrop-blur-md rounded-2xl shadow-2xl border border-slate-700/80 text-white p-4 animate-in fade-in zoom-in-95">
                       {/* Widget Header */}
                       <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-800">
-                        <div className="flex items-center gap-2">
-                          <span className="text-lg">📸</span>
+                        <div className="flex items-center gap-2.5">
+                          <BrandLogo size="sm" />
                           <div>
                             <h4 className="font-bold text-xs text-white leading-none">
-                              Nursery Media Downloader
+                              {BRAND.name}
                             </h4>
                             <p className="text-[10px] text-slate-400 mt-0.5">
-                              In-Page Scraper Active
+                              v{BRAND.version} • In-Page Scraper Active
                             </p>
                           </div>
                         </div>
@@ -885,11 +896,11 @@ export const ChromeAppPreview: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* Progress Bar if Downloading */}
-                      {isDownloading && (
-                        <div className="mb-3 space-y-1">
+                      {/* Progress Bar & Live EXIF/Video Stream Log if Downloading */}
+                      {(isDownloading || downloadLogs.length > 0) && (
+                        <div className="mb-3 space-y-1.5">
                           <div className="flex justify-between text-[11px] text-slate-300">
-                            <span>Downloading original 1080p files...</span>
+                            <span>{isDownloading ? 'Archiving 1080p originals...' : 'Last batch complete'}</span>
                             <span className="font-mono font-bold text-emerald-400">{downloadProgress}%</span>
                           </div>
                           <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
@@ -898,8 +909,8 @@ export const ChromeAppPreview: React.FC = () => {
                               style={{ width: `${downloadProgress}%` }}
                             />
                           </div>
-                          <p className="text-[10px] font-mono text-slate-400 truncate">
-                            {downloadStatusText}
+                          <p className="text-[10px] font-mono text-emerald-300 truncate">
+                            {downloadLogs[0] || downloadStatusText}
                           </p>
                         </div>
                       )}
@@ -930,7 +941,7 @@ export const ChromeAppPreview: React.FC = () => {
                           {isAutoLoading ? <Pause className="w-3.5 h-3.5 text-amber-400" /> : <Play className="w-3.5 h-3.5 text-amber-400" />}
                           <span>
                             {isAutoLoading
-                              ? 'Auto-Loading Feed... (Stop)'
+                              ? `Auto-Loading Feed (${autoLoadCount})...`
                               : 'Auto-Load Feed (Scroll & Load More)'}
                           </span>
                         </button>
@@ -941,9 +952,9 @@ export const ChromeAppPreview: React.FC = () => {
                         <span className="truncate">Destination: <strong>Downloads/{subfolderName}/</strong></span>
                         <button
                           onClick={() => setActiveChromeTab('options')}
-                          className="text-sky-400 hover:underline shrink-0 ml-1 cursor-pointer"
+                          className="text-sky-400 hover:underline font-semibold shrink-0 ml-1 cursor-pointer"
                         >
-                          Change ⚙️
+                          Folder &amp; Options
                         </button>
                       </div>
                     </div>
@@ -957,17 +968,17 @@ export const ChromeAppPreview: React.FC = () => {
           {activeChromeTab === 'options' && (
             <div className="flex-1 overflow-y-auto p-4 sm:p-8 flex justify-center bg-slate-50">
               <div className="max-w-xl w-full bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8 my-auto">
-                <div className="border-b border-slate-100 pb-4 mb-6">
-                  <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-sky-100 text-sky-800 text-xs font-bold mb-2">
-                    <Settings className="w-3 h-3 text-sky-600" />
-                    <span>options.html</span>
+                <div className="border-b border-slate-100 pb-4 mb-6 flex items-center gap-3.5">
+                  <BrandLogo size="md" />
+                  <div>
+                    <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-sky-100 text-sky-800 text-[11px] font-bold mb-1">
+                      <Settings className="w-3 h-3 text-sky-600" />
+                      <span>options.html • v{BRAND.version}</span>
+                    </div>
+                    <h2 className="text-xl font-black text-slate-900">
+                      {BRAND.name} Settings
+                    </h2>
                   </div>
-                  <h2 className="text-xl font-black text-slate-900">
-                    Nursery Media Downloader Settings
-                  </h2>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Configure how files are saved on your computer when downloading from Bright Horizons / Famly.
-                  </p>
                 </div>
 
                 <form onSubmit={handleSaveOptions} className="space-y-5">
@@ -984,7 +995,7 @@ export const ChromeAppPreview: React.FC = () => {
                       className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs text-slate-800 font-medium focus:ring-2 focus:ring-sky-500 focus:outline-none"
                     />
                     <div className="mt-2 p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-600 leading-relaxed">
-                      <strong>📂 How downloads work:</strong> Browser extensions save files directly inside your computer's <strong>Downloads</strong> folder. Files will be saved into the subfolder specified above (default: <code className="bg-slate-200 px-1 py-0.5 rounded text-slate-800">Nursery_Photos</code>).
+                      <strong>How downloads work:</strong> Browser extensions save files directly inside your computer&apos;s <strong>Downloads</strong> folder. Files will be saved into the subfolder specified above (default: <code className="bg-slate-200 px-1 py-0.5 rounded text-slate-800">{BRAND.defaultFolder}</code>).
                     </div>
                   </div>
 
@@ -1002,7 +1013,7 @@ export const ChromeAppPreview: React.FC = () => {
                           Always prompt with File Explorer / Finder save dialog for download batch
                         </span>
                         <p className="text-[11px] text-slate-500 mt-0.5">
-                          When enabled, Chrome or Edge will open your native File Explorer (Windows) or Finder (Mac) save dialog so you can choose any custom location or external drive.
+                          When enabled, Chrome, Edge, or Firefox will open your native File Explorer (Windows) or Finder (Mac) save dialog so you can choose any custom location or external drive.
                         </p>
                       </div>
                     </label>
@@ -1020,10 +1031,10 @@ export const ChromeAppPreview: React.FC = () => {
                       placeholder="{date}_media_{index}"
                       className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs text-slate-800 font-medium focus:ring-2 focus:ring-sky-500 focus:outline-none font-mono"
                     />
-                    <div className="flex items-center justify-between text-[11px] text-slate-500 mt-1.5">
-                      <span>Supported tokens: <code className="font-mono">&#123;date&#125;</code> (YYYY-MM-DD), <code className="font-mono">&#123;index&#125;</code></span>
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500 mt-1.5">
+                      <span>Tokens: <code className="font-mono">&#123;date&#125;</code>, <code className="font-mono">&#123;index&#125;</code>, <code className="font-mono">&#123;type&#125;</code></span>
                       <span className="text-emerald-700 font-semibold font-mono">
-                        Preview: 2024-05-15_media_001.jpg
+                        Preview: {(namingPattern || BRAND.defaultNamingPattern).replace('{date}', '2024-05-15').replace('{index}', '001').replace('{type}', 'photo')}.jpg
                       </span>
                     </div>
                   </div>
@@ -1032,9 +1043,9 @@ export const ChromeAppPreview: React.FC = () => {
                   <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-950 flex items-start gap-2.5">
                     <Sparkles className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                     <div>
-                      <strong>✨ Automatic Maximum Resolution & EXIF Dates</strong>
+                      <strong>1920×1080 Master Recovery &amp; Local EXIF Privacy</strong>
                       <p className="text-[11px] text-emerald-900 mt-0.5">
-                        The extension automatically inspects responsive image sets (<code className="font-mono">srcset</code>) to download uncompressed 1080p master photos and embeds original capture dates into EXIF metadata.
+                        The extension automatically inspects responsive image sets (<code className="font-mono">srcset</code>) to download uncompressed 1080p master photos, embeds original capture dates into EXIF metadata locally in memory, and collects zero telemetry.
                       </p>
                     </div>
                   </div>
@@ -1088,21 +1099,19 @@ export const ChromeAppPreview: React.FC = () => {
                 {/* Extension Card */}
                 <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6 space-y-4">
                   <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-start gap-3">
-                      <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-sky-500 to-emerald-500 text-white flex items-center justify-center font-bold text-2xl shadow-xs">
-                        📸
-                      </div>
+                    <div className="flex items-start gap-3.5">
+                      <BrandLogo size="lg" />
                       <div>
                         <div className="flex items-center gap-2">
                           <h3 className="font-bold text-base text-slate-900">
-                            Nursery Media Downloader
+                            {BRAND.name}
                           </h3>
-                          <span className="text-xs font-mono text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
-                            1.3.0
+                          <span className="text-xs font-mono text-emerald-800 bg-emerald-100 font-bold px-2 py-0.5 rounded-full">
+                            v{BRAND.version}
                           </span>
                         </div>
                         <p className="text-xs text-slate-600 mt-1 max-w-xl">
-                          Bulk download high-resolution photos and videos with original dates from Bright Horizons FamilyApp, Famly, and nursery feeds for Chrome, Edge, and Firefox.
+                          {BRAND.tagline}.
                         </p>
                       </div>
                     </div>
@@ -1117,7 +1126,7 @@ export const ChromeAppPreview: React.FC = () => {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs bg-slate-50 p-3.5 rounded-xl border border-slate-200 text-slate-700">
                     <div>
                       <span className="font-bold text-slate-900">ID: </span>
-                      <code className="text-slate-600 font-mono text-[11px]">famly-downloader-chrome-mv3</code>
+                      <code className="text-slate-600 font-mono text-[11px]">{BRAND.chromeExtensionSimulatedId}</code>
                     </div>
                     <div>
                       <span className="font-bold text-slate-900">Inspect views: </span>
@@ -1129,7 +1138,7 @@ export const ChromeAppPreview: React.FC = () => {
                     </div>
                     <div>
                       <span className="font-bold text-slate-900">Host matches: </span>
-                      <code className="text-slate-600 font-mono text-[11px]">*.brighthorizons.co.uk, *.famly.co</code>
+                      <code className="text-slate-600 font-mono text-[11px]">*.brighthorizons.co.uk, *.famly.co, *.cloudfront.net</code>
                     </div>
                   </div>
 
@@ -1165,7 +1174,7 @@ export const ChromeAppPreview: React.FC = () => {
             Browser Action Popup
           </h3>
           <p className="text-xs text-slate-600 leading-relaxed">
-            Click the <code className="bg-slate-100 px-1 py-0.5 rounded font-bold">📸</code> icon in the Chrome toolbar above to preview the quick action popup menu, real-time item counter, and auto-scroll control.
+            Click the pinned <strong>{BRAND.name}</strong> badge in the Chrome toolbar above to preview the quick action popup menu, real-time item counter, and auto-scroll control.
           </p>
         </div>
 
@@ -1182,11 +1191,11 @@ export const ChromeAppPreview: React.FC = () => {
         </div>
 
         <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs">
-          <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center mb-3">
+          <div className="w-10 h-10 rounded-xl bg-teal-100 text-teal-700 flex items-center justify-center mb-3">
             <FolderOpen className="w-5 h-5" />
           </div>
           <h3 className="font-bold text-slate-900 text-sm mb-1">
-            EXIF & Folder Setup
+            EXIF &amp; Folder Setup
           </h3>
           <p className="text-xs text-slate-600 leading-relaxed">
             Original dates are permanently embedded into the EXIF header of every photo before being saved into your <code className="bg-slate-100 px-1 py-0.5 rounded font-mono font-bold">Downloads/{subfolderName}/</code> folder.

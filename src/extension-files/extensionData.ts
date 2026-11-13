@@ -15,13 +15,13 @@ export interface ExtensionFile {
 export const MANIFEST_JSON = `{
   "manifest_version": 3,
   "name": "Nursery Media Downloader",
-  "version": "1.3.0",
-  "description": "Bulk download high-resolution photos and videos with original dates from Bright Horizons FamilyApp, Famly, and nursery feeds for Chrome, Edge, and Firefox.",
+  "short_name": "Nursery Downloader",
+  "version": "1.4.0",
+  "description": "Bulk download 1920x1080 photos and videos with embedded EXIF capture dates from Bright Horizons FamilyApp and Famly.",
   "permissions": [
     "downloads",
     "storage",
-    "activeTab",
-    "tabs"
+    "activeTab"
   ],
   "host_permissions": [
     "*://*.brighthorizons.co.uk/*",
@@ -29,12 +29,16 @@ export const MANIFEST_JSON = `{
     "*://*.famly.co/*",
     "*://*.famly.com/*",
     "*://*.famly.dk/*",
-    "*://*.famly.net/*"
+    "*://*.famly.net/*",
+    "*://*.cloudfront.net/*",
+    "*://*.amazonaws.com/*"
   ],
   "action": {
+    "default_title": "Nursery Media Downloader",
     "default_popup": "popup.html",
     "default_icon": {
       "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
       "48": "icons/icon48.png",
       "128": "icons/icon128.png"
     }
@@ -63,6 +67,7 @@ export const MANIFEST_JSON = `{
   },
   "icons": {
     "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   }
@@ -71,13 +76,13 @@ export const MANIFEST_JSON = `{
 export const FIREFOX_MANIFEST_JSON = `{
   "manifest_version": 3,
   "name": "Nursery Media Downloader",
-  "version": "1.3.0",
-  "description": "Bulk download high-resolution photos and videos with original dates from Bright Horizons FamilyApp, Famly, and nursery feeds for Firefox, Chrome, and Edge.",
+  "short_name": "Nursery Downloader",
+  "version": "1.4.0",
+  "description": "Bulk download 1920x1080 photos and videos with embedded EXIF capture dates from Bright Horizons FamilyApp and Famly.",
   "permissions": [
     "downloads",
     "storage",
-    "activeTab",
-    "tabs"
+    "activeTab"
   ],
   "host_permissions": [
     "*://*.brighthorizons.co.uk/*",
@@ -85,12 +90,16 @@ export const FIREFOX_MANIFEST_JSON = `{
     "*://*.famly.co/*",
     "*://*.famly.com/*",
     "*://*.famly.dk/*",
-    "*://*.famly.net/*"
+    "*://*.famly.net/*",
+    "*://*.cloudfront.net/*",
+    "*://*.amazonaws.com/*"
   ],
   "action": {
+    "default_title": "Nursery Media Downloader",
     "default_popup": "popup.html",
     "default_icon": {
       "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
       "48": "icons/icon48.png",
       "128": "icons/icon128.png"
     }
@@ -119,22 +128,26 @@ export const FIREFOX_MANIFEST_JSON = `{
   },
   "browser_specific_settings": {
     "gecko": {
-      "id": "famly-downloader@robinfowler.addon",
-      "strict_min_version": "109.0"
+      "id": "nursery-media-downloader@robinfowler.addon",
+      "strict_min_version": "109.0",
+      "data_collection_permissions": {
+        "required": ["none"]
+      }
     }
   },
   "icons": {
     "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   }
 }`;
 
-export const BACKGROUND_JS = `// Background Service Worker for Nursery Media Downloader (Manifest V3)
+export const BACKGROUND_JS = `// Background Service Worker for Nursery Media Downloader v1.4.0 (Manifest V3)
 let activeDownloads = new Map();
 
 chrome.runtime.onInstalled.addListener(() => {
-  console.log('[Nursery Downloader] Extension installed and active.');
+  console.log('[Nursery Media Downloader] Extension v1.4.0 installed and ready.');
   chrome.storage.sync.get(['downloadFolder', 'namingPattern'], (res) => {
     if (!res.downloadFolder) {
       chrome.storage.sync.set({
@@ -147,7 +160,7 @@ chrome.runtime.onInstalled.addListener(() => {
 
 // Helper: Formats date to EXIF standard (YYYY:MM:DD HH:MM:SS)
 function formatExifDate(dateStr) {
-  const match = (dateStr || '').match(new RegExp('(\\d{4})[-/.](\\d{2})[-/.](\\d{2})'));
+  const match = (dateStr || '').match(new RegExp('(\\\\d{4})[-/.](\\\\d{2})[-/.](\\\\d{2})'));
   if (match) {
     return match[1] + ':' + match[2] + ':' + match[3] + ' 12:00:00';
   }
@@ -249,7 +262,7 @@ function injectExifIntoJpeg(buffer, dateStr) {
   return combined.buffer;
 }
 
-// Convert ArrayBuffer to Data URL
+// Convert ArrayBuffer to Data URL (used for JPEG EXIF injection in MV3 service workers)
 function bufferToDataUrl(buffer, mimeType) {
   const bytes = new Uint8Array(buffer);
   let binary = '';
@@ -305,20 +318,23 @@ async function handleBatchDownload(items, tabId) {
 
   for (let i = 0; i < items.length; i++) {
     const item = items[i];
-    const isVideo = item.url.includes('.mp4') || item.url.includes('video') || item.isVideo;
+    const isVideo = Boolean(item.url.includes('.mp4') || item.url.includes('.mov') || item.url.includes('video') || item.isVideo);
     const ext = isVideo ? '.mp4' : '.jpg';
     const indexStr = String(i + 1).padStart(3, '0');
-    
-    // Compute filename based on settings
-    let baseName = settings.namingPattern
+    const mediaTypeToken = isVideo ? 'video' : 'photo';
+
+    // Sanitize filename tokens
+    let baseName = (settings.namingPattern || '{date}_media_{index}')
       .replace('{date}', item.date || 'undated')
-      .replace('{index}', indexStr);
+      .replace('{index}', indexStr)
+      .replace('{type}', mediaTypeToken)
+      .replace(/[^a-zA-Z0-9_\\-.]/g, '_');
 
     let folderPrefix = '';
     if (settings.downloadFolder && typeof settings.downloadFolder === 'string') {
-      const trimmed = settings.downloadFolder.trim();
+      const trimmed = settings.downloadFolder.trim().replace(/^[/\\\\]+|[/\\\\]+$/g, '');
       if (trimmed.length > 0) {
-        folderPrefix = trimmed.endsWith('/') ? trimmed : trimmed + '/';
+        folderPrefix = trimmed + '/';
       }
     }
     const filename = folderPrefix + baseName + ext;
@@ -328,7 +344,7 @@ async function handleBatchDownload(items, tabId) {
       await downloadItem(item, filename, isVideo, shouldPrompt);
       completed++;
     } catch (err) {
-      console.error('[Nursery Downloader] Download failed for:', item.url, err);
+      console.error('[Nursery Media Downloader] Download failed for:', item.url, err);
       failed++;
     }
 
@@ -355,29 +371,26 @@ async function handleBatchDownload(items, tabId) {
 async function downloadItem(item, filename, isVideo, promptSaveAs = false) {
   let downloadUrl = item.url;
 
-  // Automatically inject original date into EXIF metadata and file payload
-  try {
-    const res = await fetch(item.url);
-    if (res.ok) {
-      const buffer = await res.arrayBuffer();
-      let finalBuffer = buffer;
-
-      if (!isVideo) {
-        // Embed DateTimeOriginal into JPEG header
-        finalBuffer = injectExifIntoJpeg(buffer, item.date);
+  // Only buffer & inject EXIF metadata for photos (!isVideo).
+  // Videos stream directly via native browser download manager to avoid MV3 data-URL memory limits.
+  if (!isVideo) {
+    try {
+      const res = await fetch(item.url);
+      if (res.ok) {
+        const buffer = await res.arrayBuffer();
+        const finalBuffer = injectExifIntoJpeg(buffer, item.date);
+        const mimeType = 'image/jpeg';
+        if (typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function') {
+          const blob = new Blob([finalBuffer], { type: mimeType });
+          downloadUrl = URL.createObjectURL(blob);
+        } else {
+          downloadUrl = bufferToDataUrl(finalBuffer, mimeType);
+        }
       }
-
-      const mimeType = isVideo ? 'video/mp4' : 'image/jpeg';
-      if (typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function') {
-        const blob = new Blob([finalBuffer], { type: mimeType });
-        downloadUrl = URL.createObjectURL(blob);
-      } else {
-        downloadUrl = bufferToDataUrl(finalBuffer, mimeType);
-      }
+    } catch (fetchErr) {
+      console.warn('[Nursery Media Downloader] Direct URL fallback (EXIF pre-process bypassed):', fetchErr);
+      downloadUrl = item.url;
     }
-  } catch (fetchErr) {
-    console.warn('[Nursery Downloader] Direct URL fallback (EXIF pre-process bypassed):', fetchErr);
-    downloadUrl = item.url;
   }
 
   return new Promise((resolve, reject) => {
@@ -1035,81 +1048,140 @@ export const CONTENT_JS = `// Content script for Famly / Bright Horizons FamilyA
   }
 
   /**
-   * Creates floating panel UI in page
+   * Helper: Creates DOM elements safely via document.createElement (Firefox AMO compliant)
+   */
+  function createEl(tag, attrs, children) {
+    const el = document.createElement(tag);
+    if (attrs) {
+      for (const k of Object.keys(attrs)) {
+        if (k === 'className') el.className = attrs[k];
+        else if (k === 'textContent') el.textContent = attrs[k];
+        else el.setAttribute(k, attrs[k]);
+      }
+    }
+    if (Array.isArray(children)) {
+      for (let i = 0; i < children.length; i++) {
+        if (children[i]) el.appendChild(children[i]);
+      }
+    }
+    return el;
+  }
+
+  /**
+   * Creates floating panel UI in page using safe DOM node construction
    */
   function createUI() {
     if (document.getElementById('famly-downloader-panel')) return;
 
-    const panel = document.createElement('div');
-    panel.id = 'famly-downloader-panel';
-    panel.innerHTML = \`
-      <div class="famly-header">
-        <div class="famly-brand">
-          <span class="famly-icon">📸</span>
-          <span class="famly-title">Nursery Media Downloader</span>
-        </div>
-        <button id="famly-min-btn" title="Minimize / Expand">_</button>
-      </div>
+    const panel = createEl('div', { id: 'famly-downloader-panel' });
 
-      <div class="famly-body">
-        <div class="famly-stats-row">
-          <div class="famly-stat-chip">
-            <span class="famly-stat-num" id="famly-count-queued">0</span>
-            <span class="famly-stat-label">Discovered</span>
-          </div>
-          <div class="famly-stat-chip">
-            <span class="famly-stat-num" id="famly-count-saved">0</span>
-            <span class="famly-stat-label">Saved</span>
-          </div>
-        </div>
+    // Brand Icon badge (uses packaged icon32.png if available, with fallback glyph)
+    let brandIconNode;
+    try {
+      const iconUrl = chrome.runtime.getURL('icons/icon32.png');
+      brandIconNode = createEl('img', {
+        src: iconUrl,
+        alt: 'Nursery Media Downloader',
+        className: 'famly-icon-img',
+        width: '20',
+        height: '20'
+      });
+    } catch (e) {
+      brandIconNode = createEl('span', { className: 'famly-icon', textContent: '📷' });
+    }
 
-        <div class="famly-actions">
-          <button id="famly-scroll-btn" class="famly-btn secondary">Auto-Load Feed</button>
-          <button id="famly-dl-btn" class="famly-btn primary">Download (0)</button>
-        </div>
+    const brandWrap = createEl('div', { className: 'famly-brand' }, [
+      brandIconNode,
+      createEl('span', { className: 'famly-title', textContent: 'Nursery Media Downloader' })
+    ]);
 
-        <div class="famly-footer-bar">
-          <button id="famly-copy-btn" class="famly-text-link">Copy URLs</button>
-          <span class="famly-dot">•</span>
-          <button id="famly-options-btn" class="famly-text-link">Folder & Settings ⚙️</button>
-        </div>
-      </div>
-    \`;
+    const minBtn = createEl('button', {
+      id: 'famly-min-btn',
+      title: 'Minimize / Expand',
+      type: 'button',
+      textContent: '_'
+    });
 
+    const header = createEl('div', { className: 'famly-header' }, [brandWrap, minBtn]);
+
+    const queuedChip = createEl('div', { className: 'famly-stat-chip' }, [
+      createEl('span', { className: 'famly-stat-num', id: 'famly-count-queued', textContent: '0' }),
+      createEl('span', { className: 'famly-stat-label', textContent: 'Discovered' })
+    ]);
+
+    const savedChip = createEl('div', { className: 'famly-stat-chip' }, [
+      createEl('span', { className: 'famly-stat-num', id: 'famly-count-saved', textContent: '0' }),
+      createEl('span', { className: 'famly-stat-label', textContent: 'Saved' })
+    ]);
+
+    const statsRow = createEl('div', { className: 'famly-stats-row' }, [queuedChip, savedChip]);
+
+    const scrollBtn = createEl('button', {
+      id: 'famly-scroll-btn',
+      className: 'famly-btn secondary',
+      type: 'button',
+      textContent: 'Auto-Load Feed'
+    });
+
+    const dlBtn = createEl('button', {
+      id: 'famly-dl-btn',
+      className: 'famly-btn primary',
+      type: 'button',
+      textContent: 'Download (0)'
+    });
+
+    const actionsRow = createEl('div', { className: 'famly-actions' }, [scrollBtn, dlBtn]);
+
+    const copyBtn = createEl('button', {
+      id: 'famly-copy-btn',
+      className: 'famly-text-link',
+      type: 'button',
+      textContent: 'Copy URLs'
+    });
+
+    const optBtn = createEl('button', {
+      id: 'famly-options-btn',
+      className: 'famly-text-link',
+      type: 'button',
+      textContent: 'Folder & Settings'
+    });
+
+    const footerBar = createEl('div', { className: 'famly-footer-bar' }, [
+      copyBtn,
+      createEl('span', { className: 'famly-dot', textContent: '•' }),
+      optBtn
+    ]);
+
+    const body = createEl('div', { className: 'famly-body' }, [
+      statsRow,
+      actionsRow,
+      footerBar
+    ]);
+
+    panel.appendChild(header);
+    panel.appendChild(body);
     document.body.appendChild(panel);
 
     // Event Listeners
-    const scrollBtn = document.getElementById('famly-scroll-btn');
-    const dlBtn = document.getElementById('famly-dl-btn');
-    const minBtn = document.getElementById('famly-min-btn');
-    const copyBtn = document.getElementById('famly-copy-btn');
-    const optBtn = document.getElementById('famly-options-btn');
+    scrollBtn.addEventListener('click', () => toggleAutoLoad(scrollBtn));
+    dlBtn.addEventListener('click', () => startDownload());
 
-    if (scrollBtn) scrollBtn.addEventListener('click', () => toggleAutoLoad(scrollBtn));
-    if (dlBtn) dlBtn.addEventListener('click', () => startDownload());
+    optBtn.addEventListener('click', () => {
+      chrome.runtime.sendMessage({ action: 'OPEN_OPTIONS' });
+    });
 
-    if (optBtn) {
-      optBtn.addEventListener('click', () => {
-        chrome.runtime.sendMessage({ action: 'OPEN_OPTIONS' });
-      });
-    }
+    minBtn.addEventListener('click', () => {
+      isPanelMinimized = !isPanelMinimized;
+      panel.classList.toggle('minimized', isPanelMinimized);
+      minBtn.textContent = isPanelMinimized ? '□' : '_';
+    });
 
-    if (minBtn) {
-      minBtn.addEventListener('click', () => {
-        isPanelMinimized = !isPanelMinimized;
-        panel.classList.toggle('minimized', isPanelMinimized);
-        minBtn.textContent = isPanelMinimized ? '□' : '_';
-      });
-    }
-
-    if (copyBtn) {
-      copyBtn.addEventListener('click', () => {
-        const urls = Array.from(mediaQueue.values()).map((v) => v.url).join('\\\\n');
-        navigator.clipboard.writeText(urls);
-        copyBtn.textContent = 'Copied!';
-        setTimeout(() => { copyBtn.textContent = 'Copy URLs'; }, 1500);
-      });
-    }
+    copyBtn.addEventListener('click', () => {
+      const urls = Array.from(mediaQueue.values()).map((v) => v.url).join('\\\\n');
+      navigator.clipboard.writeText(urls);
+      copyBtn.textContent = 'Copied!';
+      setTimeout(() => { copyBtn.textContent = 'Copy URLs'; }, 1500);
+    });
 
     updateUI();
   }
@@ -1238,11 +1310,11 @@ export const CONTENT_CSS = `/* Styling for in-page floating widget */
   position: fixed;
   bottom: 24px;
   right: 24px;
-  width: 270px;
+  width: 276px;
   background: rgba(255, 255, 255, 0.98);
   backdrop-filter: blur(12px);
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  border: 1px solid #cbd5e1;
+  box-shadow: 0 12px 28px -6px rgba(15, 23, 42, 0.18), 0 8px 12px -6px rgba(15, 23, 42, 0.08);
   border-radius: 14px;
   z-index: 99999999;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -1271,7 +1343,7 @@ export const CONTENT_CSS = `/* Styling for in-page floating widget */
   justify-content: space-between;
   padding: 10px 14px;
   background: #f8fafc;
-  border-bottom: 1px solid #edf2f7;
+  border-bottom: 1px solid #e2e8f0;
 }
 
 .famly-brand {
@@ -1284,10 +1356,18 @@ export const CONTENT_CSS = `/* Styling for in-page floating widget */
   font-size: 16px;
 }
 
+.famly-icon-img {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  display: block;
+}
+
 .famly-title {
   font-weight: 700;
   font-size: 13px;
   color: #0f172a;
+  letter-spacing: -0.01em;
 }
 
 #famly-min-btn {
@@ -1321,6 +1401,7 @@ export const CONTENT_CSS = `/* Styling for in-page floating widget */
   padding: 6px 8px;
   border-radius: 8px;
   text-align: center;
+  border: 1px solid #e2e8f0;
 }
 
 .famly-stat-num {
@@ -1403,6 +1484,7 @@ export const CONTENT_CSS = `/* Styling for in-page floating widget */
   border: none;
   padding: 0;
   font-size: 11px;
+  font-weight: 600;
   cursor: pointer;
 }
 
@@ -1435,18 +1517,22 @@ export const POPUP_HTML = `<!DOCTYPE html>
       gap: 10px;
       margin-bottom: 14px;
     }
-    .logo {
-      font-size: 24px;
+    .logo-img {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      flex-shrink: 0;
     }
     .title {
       font-size: 15px;
       font-weight: 700;
       margin: 0;
+      letter-spacing: -0.01em;
     }
     .subtitle {
       font-size: 11px;
       color: #64748b;
-      margin: 0;
+      margin: 2px 0 0 0;
     }
     .card {
       background: white;
@@ -1458,8 +1544,12 @@ export const POPUP_HTML = `<!DOCTYPE html>
     .stat-row {
       display: flex;
       justify-content: space-between;
+      align-items: center;
       margin-bottom: 6px;
       font-size: 13px;
+    }
+    .stat-row:last-child {
+      margin-bottom: 0;
     }
     .stat-val {
       font-weight: 600;
@@ -1486,26 +1576,28 @@ export const POPUP_HTML = `<!DOCTYPE html>
       transition: background 0.15s;
     }
     .btn-primary { background: #16a34a; color: white; }
-    .btn-primary:hover { background: #15803d; }
+    .btn-primary:hover:not(:disabled) { background: #15803d; }
+    .btn-primary:disabled { background: #94a3b8; cursor: not-allowed; }
     .btn-secondary { background: #e2e8f0; color: #1e293b; }
     .btn-secondary:hover { background: #cbd5e1; }
     .footer {
       display: flex;
       justify-content: space-between;
+      align-items: center;
       font-size: 11px;
       color: #64748b;
       margin-top: 10px;
     }
-    .footer a { color: #0284c7; text-decoration: none; }
+    .footer a { color: #0284c7; text-decoration: none; font-weight: 600; }
     .footer a:hover { text-decoration: underline; }
   </style>
 </head>
 <body>
   <div class="header">
-    <div class="logo">📸</div>
+    <img src="icons/icon48.png" alt="Nursery Media Downloader" class="logo-img">
     <div>
       <h1 class="title">Nursery Media Downloader</h1>
-      <p class="subtitle">Bright Horizons & Famly Media</p>
+      <p class="subtitle">Bright Horizons FamilyApp &amp; Famly</p>
     </div>
   </div>
 
@@ -1529,8 +1621,8 @@ export const POPUP_HTML = `<!DOCTYPE html>
   <button id="options-btn" class="btn btn-secondary">Extension Settings</button>
 
   <div class="footer">
-    <span>v1.3.0 MV3</span>
-    <a href="#" id="open-options">Folder & Options ⚙️</a>
+    <span>v1.4.0 • Manifest V3</span>
+    <a href="#" id="open-options">Folder &amp; Options</a>
   </div>
 
   <script src="popup.js"></script>
@@ -1555,7 +1647,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   );
 
   if (isFamlyTab) {
-    statusEl.textContent = 'Famly Active';
+    statusEl.textContent = 'Feed Active';
     statusEl.className = 'badge active';
   }
 
@@ -1563,7 +1655,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (tab?.id) {
     chrome.tabs.sendMessage(tab.id, { action: 'GET_CONTENT_STATS' }, (res) => {
       if (!chrome.runtime.lastError && res) {
-        statusEl.textContent = 'Famly Active';
+        statusEl.textContent = 'Feed Active';
         statusEl.className = 'badge active';
         queueEl.textContent = res.queueCount || 0;
         savedEl.textContent = res.savedCount || 0;
@@ -1579,16 +1671,16 @@ document.addEventListener('DOMContentLoaded', async () => {
           dlBtn.textContent = 'Download ' + res.queueCount + ' Items';
         }
       } else if (!isFamlyTab) {
-        statusEl.textContent = 'Not on Famly';
+        statusEl.textContent = 'Not on Portal';
         statusEl.className = 'badge inactive';
-        dlBtn.textContent = 'Open Famly First';
+        dlBtn.textContent = 'Open Famly / FamilyApp First';
         dlBtn.disabled = true;
       }
     });
   } else {
-    statusEl.textContent = 'Not on Famly';
+    statusEl.textContent = 'Not on Portal';
     statusEl.className = 'badge inactive';
-    dlBtn.textContent = 'Open Famly First';
+    dlBtn.textContent = 'Open Famly / FamilyApp First';
     dlBtn.disabled = true;
   }
 
@@ -1630,11 +1722,11 @@ export const OPTIONS_HTML = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Nursery Media Downloader Settings</title>
+  <title>Nursery Media Downloader — Settings</title>
   <style>
     body {
-      max-width: 600px;
-      margin: 30px auto;
+      max-width: 620px;
+      margin: 32px auto;
       padding: 0 20px;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       color: #1e293b;
@@ -1648,8 +1740,21 @@ export const OPTIONS_HTML = `<!DOCTYPE html>
       box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
       margin-bottom: 20px;
     }
-    h1 { font-size: 20px; margin-top: 0; margin-bottom: 6px; color: #0f172a; }
-    p { font-size: 13px; color: #64748b; margin-top: 0; }
+    .brand-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .brand-header img {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+    }
+    h1 { font-size: 19px; margin: 0 0 4px 0; color: #0f172a; }
+    p { font-size: 13px; color: #64748b; margin: 0; }
     .form-group { margin-bottom: 20px; }
     label { display: block; font-weight: 600; font-size: 13px; margin-bottom: 6px; color: #0f172a; }
     input[type="text"], select {
@@ -1734,15 +1839,20 @@ export const OPTIONS_HTML = `<!DOCTYPE html>
 </head>
 <body>
   <div class="card">
-    <h1>Nursery Media Downloader Settings</h1>
-    <p>Configure how files are saved on your computer when downloading from Bright Horizons / Famly.</p>
+    <div class="brand-header">
+      <img src="icons/icon48.png" alt="Nursery Media Downloader">
+      <div>
+        <h1>Nursery Media Downloader Settings</h1>
+        <p>v1.4.0 • Bright Horizons FamilyApp &amp; Famly Archiver</p>
+      </div>
+    </div>
 
     <div class="form-group">
       <label for="downloadFolder">Subfolder Name in Downloads</label>
       <input type="text" id="downloadFolder" value="Nursery_Photos" placeholder="Nursery_Photos">
       
       <div class="info-box">
-        <strong>📂 How downloads work:</strong><br>
+        <strong>How downloads work:</strong><br>
         Browser extensions save files inside your computer's <strong>Downloads</strong> folder. Files will be saved into the subfolder specified above (default: <code>Nursery_Photos</code>).
       </div>
     </div>
@@ -1762,12 +1872,12 @@ export const OPTIONS_HTML = `<!DOCTYPE html>
     <div class="form-group">
       <label for="namingPattern">File Naming Pattern</label>
       <input type="text" id="namingPattern" value="{date}_media_{index}">
-      <div class="hint">Supported tokens: <code>{date}</code> (YYYY-MM-DD), <code>{index}</code> (001, 002)</div>
+      <div class="hint">Supported tokens: <code>{date}</code> (YYYY-MM-DD), <code>{index}</code> (001, 002), <code>{type}</code> (photo, video)</div>
     </div>
 
     <div class="tip-box" style="background: #f8fafc; border-color: #cbd5e1; color: #334155; margin-top: 15px;">
-      <strong>✨ Automatic Maximum Resolution & EXIF Dates</strong><br>
-      The extension automatically inspects responsive image sets (<code>srcset</code>) to download uncompressed master photos and embeds original capture dates into EXIF metadata.
+      <strong>1920x1080 Master Recovery &amp; Local EXIF Privacy</strong><br>
+      The extension automatically inspects responsive image sets (<code>srcset</code>) to download uncompressed master photos, embeds original capture dates into EXIF metadata locally in memory, and collects zero telemetry.
     </div>
 
     <button id="saveBtn" class="btn">Save Preferences</button>

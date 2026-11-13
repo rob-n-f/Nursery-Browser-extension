@@ -1,6 +1,6 @@
 {
-  "name": "Famly & FamilyApp Media Downloader",
-  "description": "Chrome, Microsoft Edge, and Mozilla Firefox extension to bulk download high-resolution photos and videos from Famly and Bright Horizons FamilyApp with custom folders, EXIF datestamps, and online photo gallery sync.",
+  "name": "Nursery Media Downloader",
+  "description": "Chrome, Microsoft Edge, and Mozilla Firefox extension (Manifest V3) to bulk download 1920x1080 master photos and videos from Famly and Bright Horizons FamilyApp with embedded EXIF datestamps and cloud photo gallery sync.",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": []
 }

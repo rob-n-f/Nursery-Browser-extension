@@ -2,17 +2,14 @@ import React, { useState } from 'react';
 import {
   Folder,
   FolderOpen,
-  CheckCircle2,
   Copy,
   Check,
-  Sparkles,
   Laptop,
-  Image as ImageIcon,
   Info,
-  ShieldCheck,
-  HardDrive,
   Cloud
 } from 'lucide-react';
+import { BRAND } from '../constants/brand';
+import { BrandLogo } from './BrandLogo';
 
 export const FolderSetupGuide: React.FC = () => {
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
@@ -34,8 +31,8 @@ export const FolderSetupGuide: React.FC = () => {
 
     // 2. Fallback / Firefox
     const folderName = prompt(
-      'Enter download subfolder name (default: Nursery_Photos):',
-      selectedFolder || 'Nursery_Photos'
+      `Enter download subfolder name (default: ${BRAND.defaultFolder}):`,
+      selectedFolder || BRAND.defaultFolder
     );
     if (folderName && folderName.trim()) {
       setSelectedFolder(folderName.trim());
@@ -53,25 +50,27 @@ export const FolderSetupGuide: React.FC = () => {
       {/* Hero Banner */}
       <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-sky-950 rounded-3xl p-8 sm:p-10 text-white shadow-xl relative overflow-hidden border border-slate-700/50">
         <div className="relative z-10 max-w-3xl">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-semibold mb-4 border border-emerald-500/30">
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Organized Downloads Folder</span>
+          <div className="flex items-center gap-3 mb-4">
+            <BrandLogo size="sm" />
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-semibold border border-emerald-500/30">
+              Organized Local &amp; Cloud Downloads
+            </span>
           </div>
 
-          <h2 className="text-3xl sm:text-4xl font-black tracking-tight leading-tight mb-3">
+          <h1 className="text-3xl sm:text-4xl font-black tracking-tight leading-tight mb-3">
             Choose Your Download Folder
-          </h2>
+          </h1>
 
           <p className="text-slate-300 text-sm sm:text-base leading-relaxed mb-6">
-            Browser extensions save downloaded files inside your computer's <strong className="text-white">Downloads</strong> folder.
-            By default, all your child's high-resolution photos and videos are cleanly organized inside a dedicated
-            <strong className="text-white"> Nursery_Photos</strong> subfolder.
+            Browser extensions save downloaded files inside your computer&apos;s <strong className="text-white">Downloads</strong> folder.
+            By default, all your child&apos;s high-resolution photos and videos are cleanly organized inside a dedicated
+            <strong className="text-white"> {BRAND.defaultFolder}</strong> subfolder.
           </p>
 
           <div className="flex flex-wrap items-center gap-3 text-xs text-slate-300 bg-slate-800/80 p-3.5 rounded-xl border border-slate-700">
             <Info className="w-4 h-4 text-emerald-400 shrink-0" />
             <span>
-              The extension automatically embeds original capture dates into each photo’s <strong>EXIF metadata</strong> so when you import them into Google Photos, Apple Photos, or file managers, each picture sorts onto its <strong>exact date in your timeline</strong>!
+              <strong>{BRAND.name}</strong> automatically embeds original capture dates into each photo’s <strong>EXIF metadata</strong> so when you import them into Google Photos, Apple iCloud Photos, or file managers, each picture sorts onto its <strong>exact date in your timeline</strong>!
             </span>
           </div>
         </div>
@@ -81,16 +80,17 @@ export const FolderSetupGuide: React.FC = () => {
       <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 shadow-xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
-            <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+            <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
               <FolderOpen className="w-5 h-5 text-sky-600" />
               <span>Configure Download Subfolder</span>
-            </h3>
+            </h2>
             <p className="text-xs sm:text-sm text-slate-500">
-              Files are saved in your Downloads directory under this subfolder (default: <code>Nursery_Photos</code>).
+              Files are saved in your Downloads directory under this subfolder (default: <code>{BRAND.defaultFolder}</code>).
             </p>
           </div>
 
           <button
+            id="set-subfolder-name-btn"
             type="button"
             onClick={handleLaunchFileExplorer}
             className="inline-flex items-center gap-2 px-5 py-3 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs sm:text-sm font-semibold transition-all shadow-xs cursor-pointer self-start sm:self-auto shrink-0 select-none border-0"
@@ -140,9 +140,9 @@ export const FolderSetupGuide: React.FC = () => {
         ) : (
           <div className="bg-slate-50 border border-dashed border-slate-300 rounded-xl p-6 text-center text-xs sm:text-sm text-slate-600">
             <Folder className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-            <p className="font-medium text-slate-700 mb-1">No folder selected yet in preview test</p>
+            <p className="font-medium text-slate-700 mb-1">Default subfolder active: <code className="font-mono font-bold text-slate-900">{BRAND.defaultFolder}</code></p>
             <p className="text-slate-500 text-xs">
-              Click <strong>"Launch File Explorer"</strong> above to test choosing a destination folder on your machine.
+              Click <strong>&quot;Set Subfolder Name&quot;</strong> above to test choosing a custom destination folder on your machine.
             </p>
           </div>
         )}
@@ -150,19 +150,19 @@ export const FolderSetupGuide: React.FC = () => {
 
       {/* How to configure in Extension */}
       <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 shadow-xs">
-        <h4 className="font-bold text-base text-slate-900 mb-4 flex items-center gap-2">
+        <h3 className="font-bold text-base text-slate-900 mb-4 flex items-center gap-2">
           <Laptop className="w-5 h-5 text-sky-600" />
-          <span>How to Pick Your Folder in the Extension (3 Simple Steps):</span>
-        </h4>
+          <span>How to Pick Your Folder in {BRAND.name} (3 Simple Steps):</span>
+        </h3>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs sm:text-sm">
           <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
             <div className="w-7 h-7 rounded-full bg-slate-900 text-white font-bold text-xs flex items-center justify-center mb-2">
               1
             </div>
-            <h5 className="font-bold text-slate-900 mb-1">Open Extension Options</h5>
+            <h4 className="font-bold text-slate-900 mb-1">Open Extension Options</h4>
             <p className="text-slate-600 text-xs">
-              Right-click the Nursery Media Downloader icon in Chrome or Edge and click <strong>Options</strong>, or click <strong>Folder & Settings ⚙️</strong> in the in-page floating widget.
+              Right-click the <strong>{BRAND.name}</strong> icon in Chrome, Edge, or Firefox and click <strong>Options</strong>, or click <strong>Folder &amp; Settings</strong> in the in-page floating widget.
             </p>
           </div>
 
