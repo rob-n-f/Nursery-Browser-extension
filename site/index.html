@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nursery Media Downloader — Bright Horizons FamilyApp &amp; Famly Archiver</title>
+  <meta name="description" content="Bulk download 1920x1080 photos and videos with embedded EXIF capture dates from Bright Horizons FamilyApp and Famly. 100% local Manifest V3 browser extension for Chrome, Edge, and Firefox." />
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --text: #0f172a;
+      --muted: #475569;
+      --border: #e2e8f0;
+      --sky: #0284c7;
+      --teal: #0d9488;
+      --emerald: #16a34a;
+      --badge-bg: #f0fdf4;
+      --badge-text: #166534;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+    header {
+      background: linear-gradient(135deg, #0f172a 0%, #0c4a6e 55%, #065f46 100%);
+      color: #ffffff;
+      padding: 3.5rem 1.25rem 3rem;
+    }
+    .container {
+      max-width: 880px;
+      margin: 0 auto;
+    }
+    .nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2.25rem;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.75rem;
+      color: #ffffff;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 1.05rem;
+    }
+    .nav-links {
+      display: flex;
+      gap: 1.25rem;
+      font-size: 0.95rem;
+    }
+    .nav-links a {
+      color: #cbd5e1;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .nav-links a:hover, .nav-links a.active {
+      color: #ffffff;
+      text-decoration: underline;
+      text-underline-offset: 4px;
+    }
+    .hero-pill {
+      display: inline-block;
+      background: rgba(255, 255, 255, 0.14);
+      border: 1px solid rgba(255, 255, 255, 0.24);
+      padding: 0.25rem 0.75rem;
+      border-radius: 999px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      margin-bottom: 0.9rem;
+    }
+    h1 {
+      margin: 0 0 0.75rem;
+      font-size: clamp(1.75rem, 3.5vw, 2.45rem);
+      line-height: 1.2;
+    }
+    .hero-sub {
+      margin: 0 0 1.5rem;
+      color: #e2e8f0;
+      font-size: 1.08rem;
+      max-width: 680px;
+    }
+    .cta-row {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+    .btn {
+      display: inline-block;
+      padding: 0.65rem 1.15rem;
+      border-radius: 0.55rem;
+      font-weight: 600;
+      font-size: 0.95rem;
+      text-decoration: none;
+    }
+    .btn-primary {
+      background: #10b981;
+      color: #052e16;
+    }
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.12);
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+    }
+    main {
+      padding: 2.5rem 1.25rem 3.5rem;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1.15rem;
+      margin-bottom: 2rem;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 0.85rem;
+      padding: 1.35rem;
+    }
+    .card h2, .card h3 {
+      margin-top: 0;
+      margin-bottom: 0.5rem;
+      font-size: 1.1rem;
+    }
+    .card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+    .section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 0.85rem;
+      padding: 1.6rem;
+      margin-bottom: 1.5rem;
+    }
+    .section h2 {
+      margin-top: 0;
+      margin-bottom: 0.75rem;
+      font-size: 1.25rem;
+    }
+    ul {
+      margin: 0.5rem 0 0;
+      padding-left: 1.25rem;
+      color: var(--muted);
+    }
+    li { margin-bottom: 0.45rem; }
+    code {
+      background: #f1f5f9;
+      padding: 0.12rem 0.35rem;
+      border-radius: 0.25rem;
+      font-size: 0.88em;
+      color: #0f172a;
+    }
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 1.75rem 1.25rem;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    .footer-inner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    footer a {
+      color: var(--sky);
+      text-decoration: none;
+    }
+    footer a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <nav class="nav" aria-label="Primary">
+        <a class="brand" href="./">
+          <svg width="34" height="34" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <defs>
+              <linearGradient id="bg" x1="0" y1="0" x2="128" y2="128" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stop-color="#0369a1" />
+                <stop offset="48%" stop-color="#0d9488" />
+                <stop offset="100%" stop-color="#16a34a" />
+              </linearGradient>
+              <linearGradient id="lens" x1="44" y1="48" x2="84" y2="88" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stop-color="#0f172a" />
+                <stop offset="100%" stop-color="#0284c7" />
+              </linearGradient>
+            </defs>
+            <rect x="4" y="4" width="120" height="120" rx="28" fill="url(#bg)" />
+            <path d="M44 37C44 33.6863 46.6863 31 50 31H66C69.3137 31 72 33.6863 72 37V42H44V37Z" fill="white" />
+            <rect x="78" y="34" width="12" height="5" rx="2.5" fill="#fde047" />
+            <rect x="24" y="40" width="80" height="56" rx="14" fill="white" />
+            <circle cx="60" cy="68" r="21" fill="url(#lens)" />
+            <circle cx="60" cy="68" r="16" stroke="#38bdf8" stroke-opacity="0.45" stroke-width="2" />
+            <circle cx="54" cy="62" r="3.5" fill="white" fill-opacity="0.9" />
+            <circle cx="89" cy="51" r="3.5" fill="#10b981" />
+            <circle cx="94" cy="86" r="16" fill="#0f172a" />
+            <circle cx="94" cy="86" r="13.5" fill="#10b981" />
+            <path d="M94 79V90M94 90L89 85M94 90L99 85M88 93.5H100" stroke="#052e16" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+          <span>Nursery Media Downloader</span>
+        </a>
+        <div class="nav-links">
+          <a class="active" href="./">About</a>
+          <a href="./privacy.html">Privacy Policy</a>
+          <a href="https://github.com/rob-n-f/Nursery-Browser-extension" target="_blank" rel="noopener noreferrer">GitHub</a>
+        </div>
+      </nav>
+
+      <div class="hero-pill">Version 1.4.0 &bull; Manifest V3 &bull; Chrome, Edge &amp; Firefox</div>
+      <h1>Archive Your Child's Nursery Photos &amp; Videos Locally</h1>
+      <p class="hero-sub">
+        Bulk-download full-resolution 1920&times;1080 photos and MP4/MOV videos from Bright Horizons FamilyApp and Famly with original capture dates embedded in EXIF metadata and filenames.
+      </p>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="./privacy.html">Read Privacy Policy</a>
+        <a class="btn btn-secondary" href="https://github.com/rob-n-f/Nursery-Browser-extension" target="_blank" rel="noopener noreferrer">Source Code &amp; Support</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="container">
+      <div class="grid">
+        <div class="card">
+          <h3>Full-Resolution Recovery</h3>
+          <p>Upgrades feed thumbnails to original <code>1920x1080</code> (and portrait <code>1080x1920</code>) CDN masters while excluding small profile avatars.</p>
+        </div>
+        <div class="card">
+          <h3>Embedded EXIF Datestamps</h3>
+          <p>Writes each post's original capture date into JPEG <code>APP1</code> EXIF tags (<code>DateTimeOriginal</code>) in local memory so Apple Photos and Google Photos sort chronologically.</p>
+        </div>
+        <div class="card">
+          <h3>100% Local &amp; Private</h3>
+          <p>Zero external servers, zero analytics, and zero telemetry. Media downloads directly from your authenticated session to your <code>Downloads/Nursery_Photos/</code> folder.</p>
+        </div>
+      </div>
+
+      <section class="section">
+        <h2>Supported Portals &amp; Browsers</h2>
+        <ul>
+          <li><strong>Portals:</strong> Bright Horizons FamilyApp (<code>familyapp.brighthorizons.co.uk</code>, <code>*.brighthorizons.com</code>) and Famly (<code>app.famly.co</code>, <code>*.famly.com</code>, <code>*.famly.dk</code>, <code>*.famly.net</code>).</li>
+          <li><strong>Browsers:</strong> Google Chrome, Microsoft Edge, and Mozilla Firefox (Manifest V3).</li>
+          <li><strong>Media Types:</strong> JPEG photos with in-memory EXIF injection, and direct MP4/MOV video streaming.</li>
+        </ul>
+      </section>
+
+      <section class="section">
+        <h2>Support &amp; Feedback</h2>
+        <p style="margin:0; color: var(--muted);">
+          Need help or want to report an issue? Visit the
+          <a href="https://github.com/rob-n-f/Nursery-Browser-extension/issues" target="_blank" rel="noopener noreferrer" style="color: var(--sky);">GitHub Issues page</a>.
+        </p>
+      </section>
+    </div>
+  </main>
+
+  <footer>
+    <div class="container footer-inner">
+      <span>Nursery Media Downloader v1.4.0 &mdash; Independent parent utility, not affiliated with Bright Horizons or Famly.</span>
+      <span><a href="./privacy.html">Privacy Policy</a> &middot; <a href="https://github.com/rob-n-f/Nursery-Browser-extension" target="_blank" rel="noopener noreferrer">GitHub</a></span>
+    </div>
+  </footer>
+</body>
+</html>
