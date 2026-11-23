@@ -29,3 +29,19 @@ This repository contains both:
 npm install
 npm run dev
 ```
+
+---
+
+## Privacy & Links
+
+* **About & Support:** https://www.io-broadcast.com/nursery-media-downloader
+* **Privacy Policy:** https://www.io-broadcast.com/nursery-media-downloader/privacy-policy ([PRIVACY_POLICY.md](./PRIVACY_POLICY.md))
+
+---
+
+## License & Disclaimer
+
+Licensed under the [MIT License](./LICENSE).
+
+*This is an independent parent utility and is not affiliated with, endorsed by, or sponsored by Bright Horizons or Famly.*
+
