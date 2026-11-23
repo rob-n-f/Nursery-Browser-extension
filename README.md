@@ -36,6 +36,7 @@ npm run dev
 
 * **About & Support (GitHub Pages):** https://rob-n-f.github.io/Nursery-Browser-extension/site/
 * **Install Guide (GitHub Pages):** https://rob-n-f.github.io/Nursery-Browser-extension/site/install.html
+* **How to Use (GitHub Pages):** https://rob-n-f.github.io/Nursery-Browser-extension/site/how-to-use.html
 * **Privacy Policy (GitHub Pages):** https://rob-n-f.github.io/Nursery-Browser-extension/site/privacy.html ([PRIVACY_POLICY.md](./PRIVACY_POLICY.md))
 * **Mirror (`io-broadcast.com`):** https://www.io-broadcast.com/nursery-media-downloader &bull; [Privacy Policy](https://www.io-broadcast.com/nursery-media-downloader/privacy-policy)
 
