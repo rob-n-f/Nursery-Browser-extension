@@ -34,8 +34,9 @@ npm run dev
 
 ## Privacy & Links
 
-* **About & Support:** https://www.io-broadcast.com/nursery-media-downloader
-* **Privacy Policy:** https://www.io-broadcast.com/nursery-media-downloader/privacy-policy ([PRIVACY_POLICY.md](./PRIVACY_POLICY.md))
+* **About & Support (GitHub Pages):** https://rob-n-f.github.io/Nursery-Browser-extension/site/
+* **Privacy Policy (GitHub Pages):** https://rob-n-f.github.io/Nursery-Browser-extension/site/privacy.html ([PRIVACY_POLICY.md](./PRIVACY_POLICY.md))
+* **Mirror (`io-broadcast.com`):** https://www.io-broadcast.com/nursery-media-downloader &bull; [Privacy Policy](https://www.io-broadcast.com/nursery-media-downloader/privacy-policy)
 
 ---
 
