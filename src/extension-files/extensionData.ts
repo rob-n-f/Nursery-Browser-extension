@@ -70,7 +70,20 @@ export const MANIFEST_JSON = `{
     "32": "icons/icon32.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
-  }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["icons/icon32.png"],
+      "matches": [
+        "*://*.brighthorizons.co.uk/*",
+        "*://*.brighthorizons.com/*",
+        "*://*.famly.co/*",
+        "*://*.famly.com/*",
+        "*://*.famly.dk/*",
+        "*://*.famly.net/*"
+      ]
+    }
+  ]
 }`;
 
 export const FIREFOX_MANIFEST_JSON = `{
@@ -140,7 +153,20 @@ export const FIREFOX_MANIFEST_JSON = `{
     "32": "icons/icon32.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
-  }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["icons/icon32.png"],
+      "matches": [
+        "*://*.brighthorizons.co.uk/*",
+        "*://*.brighthorizons.com/*",
+        "*://*.famly.co/*",
+        "*://*.famly.com/*",
+        "*://*.famly.dk/*",
+        "*://*.famly.net/*"
+      ]
+    }
+  ]
 }`;
 
 export const BACKGROUND_JS = `// Background Service Worker for Nursery Media Downloader v1.4.0 (Manifest V3)
