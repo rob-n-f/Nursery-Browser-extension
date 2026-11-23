@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Install Guide — Nursery Media Downloader</title>
+  <meta name="description" content="How to install Nursery Media Downloader from browser extension stores or manually from the GitHub repository for Chrome, Edge, and Firefox." />
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --text: #0f172a;
+      --muted: #475569;
+      --border: #e2e8f0;
+      --sky: #0284c7;
+      --teal: #0d9488;
+      --emerald: #16a34a;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+    }
+    header {
+      background: #0f172a;
+      color: #ffffff;
+      padding: 1.25rem;
+    }
+    .container {
+      max-width: 880px;
+      margin: 0 auto;
+    }
+    .nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.65rem;
+      color: #ffffff;
+      text-decoration: none;
+      font-weight: 700;
+    }
+    .nav-links {
+      display: flex;
+      gap: 1.25rem;
+      font-size: 0.95rem;
+    }
+    .nav-links a {
+      color: #cbd5e1;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .nav-links a:hover, .nav-links a.active {
+      color: #ffffff;
+      text-decoration: underline;
+      text-underline-offset: 4px;
+    }
+    main {
+      padding: 2.25rem 1.25rem 3.5rem;
+    }
+    h1 {
+      margin-top: 0;
+      margin-bottom: 0.4rem;
+      font-size: 1.9rem;
+    }
+    .subtitle {
+      color: var(--muted);
+      margin-top: 0;
+      margin-bottom: 2rem;
+    }
+    .store-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    .store-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 0.85rem;
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 0.85rem;
+    }
+    .store-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .store-card h3 {
+      margin: 0;
+      font-size: 1.05rem;
+    }
+    .badge {
+      display: inline-block;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.18rem 0.55rem;
+      border-radius: 999px;
+      background: #fef3c7;
+      color: #92400e;
+      white-space: nowrap;
+    }
+    .store-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+    .store-btn {
+      display: inline-block;
+      text-align: center;
+      padding: 0.55rem 0.9rem;
+      border-radius: 0.5rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-decoration: none;
+      background: #f1f5f9;
+      color: #475569;
+      border: 1px dashed #cbd5e1;
+      cursor: default;
+    }
+    .section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 0.85rem;
+      padding: 1.65rem;
+      margin-bottom: 1.5rem;
+    }
+    .section h2 {
+      margin-top: 0;
+      margin-bottom: 0.65rem;
+      font-size: 1.25rem;
+    }
+    .section h3 {
+      margin-top: 1.35rem;
+      margin-bottom: 0.45rem;
+      font-size: 1.05rem;
+    }
+    p, li {
+      color: var(--muted);
+    }
+    ol, ul {
+      padding-left: 1.35rem;
+    }
+    li {
+      margin-bottom: 0.45rem;
+    }
+    strong {
+      color: var(--text);
+    }
+    code {
+      background: #f1f5f9;
+      padding: 0.12rem 0.35rem;
+      border-radius: 0.25rem;
+      font-size: 0.88em;
+      color: #0f172a;
+    }
+    pre {
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 0.9rem 1.1rem;
+      border-radius: 0.6rem;
+      overflow-x: auto;
+      font-size: 0.88rem;
+      line-height: 1.5;
+    }
+    pre code {
+      background: none;
+      color: inherit;
+      padding: 0;
+    }
+    a {
+      color: var(--sky);
+    }
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 1.5rem 1.25rem;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    .footer-inner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <nav class="nav" aria-label="Primary">
+        <a class="brand" href="./">
+          <span>Nursery Media Downloader</span>
+        </a>
+        <div class="nav-links">
+          <a href="./">About</a>
+          <a class="active" href="./install.html">Install</a>
+          <a href="./privacy.html">Privacy Policy</a>
+          <a href="https://github.com/rob-n-f/Nursery-Browser-extension" target="_blank" rel="noopener noreferrer">GitHub</a>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <div class="container">
+      <h1>Install Nursery Media Downloader</h1>
+      <p class="subtitle">
+        Install from your browser's extension store (coming soon) or load the extension directly from the open-source GitHub repository.
+      </p>
+
+      <!-- Store Placeholders -->
+      <div class="store-grid">
+        <div class="store-card">
+          <div>
+            <div class="store-header">
+              <h3>Chrome Web Store</h3>
+              <span class="badge">Coming Soon</span>
+            </div>
+            <p style="margin-top:0.5rem;">For Google Chrome, Brave, Arc, and other Chromium browsers.</p>
+          </div>
+          <!-- Replace href="#" with your Chrome Web Store listing URL once published -->
+          <a class="store-btn" href="#manual-install" aria-disabled="true">Store Link Pending Review</a>
+        </div>
+
+        <div class="store-card">
+          <div>
+            <div class="store-header">
+              <h3>Microsoft Edge Add-ons</h3>
+              <span class="badge">Coming Soon</span>
+            </div>
+            <p style="margin-top:0.5rem;">For Microsoft Edge on Windows and macOS.</p>
+          </div>
+          <!-- Replace href="#" with your Edge Add-ons listing URL once published -->
+          <a class="store-btn" href="#manual-install" aria-disabled="true">Store Link Pending Review</a>
+        </div>
+
+        <div class="store-card">
+          <div>
+            <div class="store-header">
+              <h3>Firefox Add-ons (AMO)</h3>
+              <span class="badge">Coming Soon</span>
+            </div>
+            <p style="margin-top:0.5rem;">For Mozilla Firefox (Manifest V3).</p>
+          </div>
+          <!-- Replace href="#" with your Firefox AMO listing URL once published -->
+          <a class="store-btn" href="#manual-install" aria-disabled="true">Store Link Pending Review</a>
+        </div>
+      </div>
+
+      <!-- Manual Install from Repo -->
+      <section class="section" id="manual-install">
+        <h2>Install Manually from the GitHub Repository</h2>
+        <p>
+          While store listings are pending, you can generate and load the extension directly from the
+          <a href="https://github.com/rob-n-f/Nursery-Browser-extension" target="_blank" rel="noopener noreferrer">GitHub repository</a>.
+        </p>
+
+        <h3>Step 1: Export the Extension Package</h3>
+        <ol>
+          <li>Clone or download the repository and install dependencies (requires <a href="https://nodejs.org/" target="_blank" rel="noopener noreferrer">Node.js</a>):</li>
+        </ol>
+        <pre><code>git clone https://github.com/rob-n-f/Nursery-Browser-extension.git
+cd Nursery-Browser-extension
+npm install
+npm run dev</code></pre>
+        <ol start="2">
+          <li>Open <code>http://localhost:3000</code> in your browser and go to the <strong>Store Publishing Kit</strong> tab.</li>
+          <li>Download the package for your browser:
+            <ul>
+              <li><strong>Chrome / Edge:</strong> <code>nursery-media-downloader-chrome-edge-mv3.zip</code></li>
+              <li><strong>Firefox:</strong> <code>nursery-media-downloader-firefox-mv3.zip</code></li>
+            </ul>
+          </li>
+          <li>Unzip the downloaded <code>.zip</code> file into a permanent folder on your computer.</li>
+        </ol>
+
+        <h3>Step 2A: Load in Google Chrome or Microsoft Edge</h3>
+        <ol>
+          <li>Open <code>chrome://extensions</code> (or <code>edge://extensions</code> in Edge).</li>
+          <li>Turn on the <strong>Developer mode</strong> toggle (top-right corner).</li>
+          <li>Click <strong>Load unpacked</strong>.</li>
+          <li>Select the unzipped <code>nursery-media-downloader-chrome-edge-mv3</code> folder.</li>
+        </ol>
+
+        <h3>Step 2B: Load in Mozilla Firefox</h3>
+        <ol>
+          <li>Open <code>about:debugging#/runtime/this-firefox</code> in Firefox.</li>
+          <li>Click <strong>Load Temporary Add-on&hellip;</strong>.</li>
+          <li>Select the <code>manifest.json</code> file inside the unzipped Firefox folder (or select the <code>.zip</code> file directly).</li>
+        </ol>
+      </section>
+
+      <section class="section">
+        <h2>How to Use After Installing</h2>
+        <ol>
+          <li>Log in to <strong>Bright Horizons FamilyApp</strong> or <strong>Famly</strong> and open your child's Learning Journey or Newsfeed.</li>
+          <li>Click the floating <strong>Download Media</strong> button in the bottom-right corner (or click the extension icon in your browser toolbar).</li>
+          <li>Optionally click <strong>Auto-Scroll &amp; Load All</strong> to load older posts, then click <strong>Download All</strong>.</li>
+          <li>Photos and videos are saved to <code>Downloads/Nursery_Photos/</code> with original capture dates embedded.</li>
+        </ol>
+      </section>
+    </div>
+  </main>
+
+  <footer>
+    <div class="container footer-inner">
+      <span><a href="./">&larr; Back to About</a></span>
+      <span><a href="./privacy.html">Privacy Policy</a> &middot; <a href="https://github.com/rob-n-f/Nursery-Browser-extension" target="_blank" rel="noopener noreferrer">GitHub</a></span>
+    </div>
+  </footer>
+</body>
+</html>
